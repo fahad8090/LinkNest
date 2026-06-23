@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>جاري التحميل...</title>
+    <style>
+        body {
+            margin: 0;
+            font-family: system-ui, -apple-system, sans-serif;
+            background-color: #f3f4f6;
+            display: flex;
+            justify-content: center;
+            padding: 40px 20px;
+            color: #1f2937;
+            transition: background-color 0.3s;
+        }
+        .profile-container {
+            width: 100%;
+            max-width: 400px;
+            text-align: center;
+        }
+        #website-title {
+            margin-bottom: 30px;
+            font-size: 1.5rem;
+            font-weight: bold;
+        }
+        #blocks-container {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        .block {
+            background: #ffffff;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            transition: transform 0.2s, box-shadow 0.2s;
+            overflow: hidden;
+            text-align: right;
+        }
+        .block:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(0,0,0,0.1);
+        }
+        .block-link a {
+            display: block;
+            padding: 16px;
+            text-decoration: none;
+            color: #111827;
+            font-weight: bold;
+            text-align: center;
+        }
+        .block-text {
+            padding: 16px;
+            margin: 0;
+            color: #4b5563;
+        }
+        .block-text strong {
+            display: block;
+            margin-bottom: 5px;
+            color: #111827;
+        }
+    </style>
+</head>
+<body>
+    <div class="profile-container">
+        <h1 id="website-title"></h1>
+        <div id="blocks-container"></div>
+    </div>
+
+    <script>
+        // التعامل الديناميكي مع مسار السكربت حسب طريقة الوصول (رابط نظيف أم مسار مباشر)
+        const isFrontendPath = window.location.pathname.includes('/frontend/');
+        const scriptPath = isFrontendPath ? 'js/renderBlocks.js' : 'frontend/js/renderBlocks.js';
+        
+        const script = document.createElement('script');
+        script.src = scriptPath;
+        document.head.appendChild(script);
+    </script>
+</body>
+</html>

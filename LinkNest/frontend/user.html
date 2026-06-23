@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html class="light" lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta content="width=device-width, initial-scale=1.0" name="viewport">
+    <title>LinkNest - My Websites</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet">
+    <script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#3b82f6",
+                        "surface": "#ffffff",
+                        "background": "#f4f5f7",
+                        "border-base": "#e5e7eb",
+                        "text-main": "#111827",
+                        "text-muted": "#6b7280"
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { font-family: 'Inter', sans-serif; -webkit-font-smoothing: antialiased; }
+        .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
+        .scrollbar-hide::-webkit-scrollbar { display: none; }
+        .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+
+        /* 🌟 Bottom Sheets Styles 🌟 */
+        .sheet-overlay { position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.4); z-index: 60; opacity: 0; pointer-events: none; transition: opacity 0.3s; backdrop-filter: blur(2px); }
+        .sheet-overlay.active { opacity: 1; pointer-events: auto; }
+        .bottom-sheet { position: absolute; bottom: -100%; left: 0; right: 0; background: #ffffff !important; border-radius: 32px 32px 0 0; z-index: 70; transition: bottom 0.3s cubic-bezier(0.175, 0.885, 0.32, 1); display: flex; flex-direction: column; padding: 24px; box-shadow: 0 -10px 40px rgba(0,0,0,0.15); }
+        .bottom-sheet.active { bottom: 0; }
+    </style>
+</head>
+<body class="bg-[#f0f2f5] flex items-center justify-center min-h-screen p-4">
+    <div class="relative w-full max-w-[440px] h-[92vh] max-h-[880px] bg-surface rounded-[40px] border-[10px] border-black shadow-2xl overflow-hidden flex flex-col">
+        
+        <header class="flex justify-between items-center px-6 pt-8 pb-4 bg-surface z-10">
+            <span class="font-bold text-[20px] text-primary flex items-center gap-1">
+                <span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">link</span>
+                LinkNest
+            </span>
+        </header>
+
+        <main class="flex-1 overflow-y-auto px-6 pb-12 space-y-6 scrollbar-hide bg-surface">
+            
+            <div class="pt-2">
+                <h1 class="text-[26px] font-bold text-text-main leading-tight">Welcome back, <br><span id="welcome-slug" class="text-primary">Creator</span>!</h1>
+                <p class="text-[14px] font-medium text-text-muted mt-2">Manage your digital storefronts below.</p>
+            </div>
+
+            <button onclick="openProSheet()" class="w-full bg-primary hover:bg-blue-600 text-white font-bold text-[15px] py-3.5 rounded-xl shadow-md transition-all active:scale-[0.98] flex items-center justify-center gap-2">
+                <span class="material-symbols-outlined text-[20px]">add</span>
+                Create new website
+            </button>
+
+            <div id="websites-container" class="space-y-3">
+                </div>
+
+            <div class="bg-gradient-to-r from-[#fffbeb] to-[#fef3c7] border border-[#fde68a] rounded-3xl p-6 relative overflow-hidden shadow-sm mt-8 cursor-pointer hover:border-[#fbbf24] transition-all active:scale-[0.98]">
+                <div class="relative z-10">
+                    <div class="inline-flex bg-yellow-400 text-yellow-900 font-bold text-[11px] px-2.5 py-1 rounded-full mb-3 uppercase tracking-wide">
+                        PRO
+                    </div>
+                    <h3 class="font-bold text-[18px] text-yellow-900 mb-4">Unlock the Power of Pro</h3>
+                    
+                    <ul class="space-y-2 mb-6">
+                        <li class="flex items-center gap-2 text-[13px] font-semibold text-yellow-800">
+                            <span class="material-symbols-outlined text-[16px] text-yellow-600">check_circle</span>
+                            Custom Domains
+                        </li>
+                        <li class="flex items-center gap-2 text-[13px] font-semibold text-yellow-800">
+                            <span class="material-symbols-outlined text-[16px] text-yellow-600">check_circle</span>
+                            Advanced Analytics
+                        </li>
+                        <li class="flex items-center gap-2 text-[13px] font-semibold text-yellow-800">
+                            <span class="material-symbols-outlined text-[16px] text-yellow-600">check_circle</span>
+                            Remove Branding
+                        </li>
+                    </ul>
+
+                    <a href="#" class="inline-flex items-center font-bold text-[14px] text-yellow-700 hover:text-yellow-900">
+                        Learn More <span class="material-symbols-outlined text-[18px] ml-1">arrow_forward</span>
+                    </a>
+                </div>
+                
+                <div class="absolute right-4 top-1/2 -translate-y-1/2 opacity-30 text-yellow-600">
+                    <span class="material-symbols-outlined text-[80px]" style="font-variation-settings: 'FILL' 1;">auto_awesome</span>
+                </div>
+            </div>
+
+        </main>
+
+        <div class="sheet-overlay" id="pro-sheet-overlay" onclick="closeProSheet()"></div>
+        
+        <div class="bottom-sheet" id="pro-bottom-sheet">
+            <div class="w-12 h-1.5 bg-gray-300 rounded-full mx-auto mb-6"></div>
+            
+            <div class="w-16 h-16 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-4 border-4 border-white shadow-sm">
+                <span class="material-symbols-outlined text-yellow-500 text-[32px]">workspace_premium</span>
+            </div>
+            
+            <h2 class="text-center font-bold text-[20px] text-text-main mb-2">Pro Feature</h2>
+            <p class="text-center text-[14px] font-medium text-text-muted mb-8 px-4">
+                Creating multiple websites requires a Pro subscription. Upgrade now to unlock this feature and scale your brand.
+            </p>
+            
+            <div class="flex flex-col gap-3">
+                <button class="w-full bg-gradient-to-r from-yellow-400 to-yellow-500 text-yellow-950 font-bold text-[16px] py-4 rounded-xl shadow-md transition-all active:scale-[0.98]">
+                    Subscribe to Pro
+                </button>
+                <button onclick="closeProSheet()" class="w-full bg-gray-100 text-gray-700 font-bold text-[16px] py-4 rounded-xl transition-all hover:bg-gray-200 active:scale-[0.98]">
+                    Go Back
+                </button>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        // Bottom Sheet Logic
+        const proOverlay = document.getElementById('pro-sheet-overlay');
+        const proSheet = document.getElementById('pro-bottom-sheet');
+
+        function openProSheet() {
+            proOverlay.classList.add('active');
+            proSheet.classList.add('active');
+        }
+
+        function closeProSheet() {
+            proOverlay.classList.remove('active');
+            proSheet.classList.remove('active');
+        }
+
+        // Auth & Dynamic Data Logic
+        document.addEventListener('DOMContentLoaded', async () => {
+            try {
+                // التحقق من الجلسة عبر الـ API
+                const response = await fetch('../backend/api/check_auth.php');
+                const data = await response.json();
+
+                if (data.logged_in === true) {
+                    const userSlug = data.slug;
+                    
+                    // 1. تحديث رسالة الترحيب
+                    document.getElementById('welcome-slug').textContent = userSlug;
+
+                    // 2. بناء كارت الموقع ديناميكياً
+                    const container = document.getElementById('websites-container');
+                    container.innerHTML = `
+                        <a href="manage.html" class="bg-surface border border-border-base rounded-2xl p-4 flex items-center justify-between shadow-sm hover:border-primary/30 transition-all active:scale-[0.98] cursor-pointer block" style="text-decoration:none;">
+                            <div class="flex items-center gap-4">
+                                <div class="w-12 h-12 rounded-full bg-blue-50 flex items-center justify-center shrink-0">
+                                    <span class="material-symbols-outlined text-primary">language</span>
+                                </div>
+                                <div class="overflow-hidden">
+                                    <h3 class="font-bold text-[15px] text-text-main truncate">${userSlug} Website</h3>
+                                    <div class="flex items-center gap-1.5 mt-1">
+                                        <div class="w-2 h-2 rounded-full bg-green-500 shrink-0"></div>
+                                        <p class="text-[12px] font-medium text-text-muted truncate">linknest.com/${userSlug}</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <span class="material-symbols-outlined text-gray-400">chevron_right</span>
+                        </a>
+                    `;
+                } else {
+                    // إذا لم يسجل دخوله، يطرد لصفحة الدخول
+                    window.location.href = 'auth.html';
+                }
+            } catch (err) {
+                console.error('Auth check failed:', err);
+                window.location.href = 'auth.html';
+            }
+        });
+    </script>
+</body>
+</html>

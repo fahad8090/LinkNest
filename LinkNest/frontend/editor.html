@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LinkNest - Editor</title>
+    <style>
+        :root {
+            --page-bg: #ffffff; 
+            --page-text: #111827;
+            --page-block-bg: transparent;
+            --page-font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { background-color: #e5e7eb; display: flex; align-items: center; justify-content: center; height: 100vh; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; overflow: hidden; }
+        
+        .phone-container { width: 100%; max-width: 440px; height: 92vh; max-height: 880px; position: relative; background: #000; border-radius: 40px; border: 10px solid #000; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25); transition: all 0.5s cubic-bezier(0.25, 1, 0.5, 1); }
+        .phone-screen { width: 100%; height: 100%; position: relative; overflow: hidden; background: var(--page-bg); border-radius: 30px; display: flex; flex-direction: column; transition: background 0.3s ease; }
+        
+        .header { display: flex; justify-content: space-between; align-items: center; padding: 16px 20px; background: #ffffff; border-bottom: 1px solid #e5e7eb; z-index: 10; border-radius: 30px 30px 0 0; transition: border-radius 0.5s ease;}
+        .header-btn { background: none; border: none; cursor: pointer; color: #111827; display: flex; align-items: center; justify-content: center; text-decoration: none; }
+        .header-title { font-weight: 600; font-size: 16px; color: #111827; }
+        
+        .btn-publish { background: #3b82f6; color: #fff; font-weight: 600; font-size: 14px; padding: 6px 18px; border-radius: 20px; border: none; cursor: pointer; display: none; transition: opacity 0.2s; }
+        .btn-publish:active { opacity: 0.8; }
+
+        .preview-area { flex: 1; overflow-y: auto; display: flex; flex-direction: column; padding: 20px 8px; padding-bottom: 100px; position: relative; font-family: var(--page-font); }
+        .preview-area::-webkit-scrollbar { display: none; }
+        
+        .empty-state { text-align: center; margin: auto; padding: 20px; color: var(--page-text); transition: opacity 0.3s ease; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; }
+        .empty-state h2 { font-size: 22px; font-weight: 700; margin-bottom: 8px; }
+        .empty-state p { font-size: 15px; opacity: 0.6; margin-bottom: 30px; font-weight: 500; }
+        .empty-state .arrow-down { font-size: 28px; opacity: 0.5; animation: bounce 1.5s infinite; }
+        @keyframes bounce { 0%, 20%, 50%, 80%, 100% {transform: translateY(0);} 40% {transform: translateY(10px);} 60% {transform: translateY(5px);} }
+
+        /* 🌟 البلوكات الرئيسية 🌟 */
+        .block-item { display: flex; align-items: center; gap: 8px; padding: 12px 8px; background: transparent; border-top: 1px solid transparent; border-bottom: 1px solid transparent; font-size: 16px; color: var(--page-text); cursor: pointer; transition: all 0.2s; position: relative; width: 100%; border-radius: 12px; margin-bottom: 8px; flex-wrap: nowrap;}
+        .block-item.dragging { opacity: 0.5; background: rgba(0,0,0,0.05); border: 1px dashed var(--page-text); }
+        .block-item.selected { box-shadow: 0 0 0 2px #3b82f6; background: rgba(59, 130, 246, 0.05); }
+        
+        .block-checkbox { width: 20px; height: 20px; border: 2px solid var(--page-text); border-radius: 50%; flex-shrink: 0; transition: all 0.2s; opacity: 0.5; }
+        .block-item.selected .block-checkbox { border-color: #3b82f6; background: #3b82f6; box-shadow: inset 0 0 0 4px rgba(59, 130, 246, 0.15); opacity: 1; }
+        
+        .block-content { flex: 1; min-width: 0; text-align: center; font-weight: 500; pointer-events: none; padding: 0 4px; }
+        .block-content * { margin: 0; padding: 0; }
+        
+        .block-content iframe { pointer-events: none; }
+        .preview-area.preview-mode .block-content iframe { pointer-events: auto; }
+
+        .block-drag-handle { color: var(--page-text); cursor: grab; display: flex; align-items: center; padding: 5px; opacity: 0.5; touch-action: none; flex-shrink: 0;}
+        .block-drag-handle:active { cursor: grabbing; }
+
+        .preview-area.preview-mode .block-checkbox, .preview-area.preview-mode .block-drag-handle { display: none !important; }
+        .preview-area.preview-mode .block-item { pointer-events: none; border-color: transparent !important; } 
+        .preview-area.preview-mode .block-item a, .preview-area.preview-mode .form-render-btn { pointer-events: auto; cursor: pointer; } 
+        .preview-area.preview-mode .form-render-input, .preview-area.preview-mode .form-check-input { pointer-events: auto; }
+        .preview-area.preview-mode .linknest-faq-item summary { pointer-events: auto; cursor: pointer; }
+
+        /* 🌟 البروفايل 🌟 */
+        .profile-block { display: flex; flex-direction: column; width: 100%; position: relative; transition: all 0.3s ease; }
+        .profile-cover-img { width: 100%; height: 120px; background-color: rgba(128,128,128,0.1); background-size: cover; background-position: center; border-radius: 16px; }
+        .profile-avatar-img { width: 90px; height: 90px; border: 4px solid var(--page-bg); margin-top: -45px; background-color: rgba(128,128,128,0.3); background-size: cover; background-position: center; z-index: 2; transition: all 0.3s ease; border-radius: 50%; }
+        .profile-title-text { font-size: 22px; font-weight: 700; margin-top: 12px; color: var(--page-text); }
+        .profile-subtitle-text { font-size: 15px; font-weight: 500; opacity: 0.7; margin-top: 4px; color: var(--page-text); }
+        .block-content a { text-decoration: none; color: var(--page-text); font-weight: 600; display: block; }
+
+        /* 🌟 الفورم 🌟 */
+        .form-render-container { padding: 18px; width: 100%; box-sizing: border-box; text-align: left; direction: ltr; margin: 0 auto; transition: all 0.3s ease; }
+        .form-render-sticker { width: 60px; height: 60px; border-radius: 50%; margin: 0 auto 12px; display: block; object-fit: cover; }
+        .form-render-field-group { margin-bottom: 12px; text-align: left; display: flex; flex-direction: column; }
+        .form-render-label { font-size: 13px; font-weight: 700; margin-bottom: 6px; display: block; opacity: 0.95; }
+        .form-render-label span { color: #ef4444; margin-left: 3px; font-size: 14px; }
+        .form-render-input { width: 100%; padding: 12px 14px; border: none; font-family: inherit; font-size: 14px; outline: none; transition: background 0.2s, border-radius 0.3s; box-sizing: border-box; }
+        .form-render-input::placeholder { opacity: 0.6; }
+        .form-render-btn { width: 100%; padding: 14px; border: none; font-family: inherit; font-size: 15px; font-weight: 700; transition: background 0.3s, color 0.3s, opacity 0.2s, border-radius 0.3s; margin-top: 4px; cursor: pointer; box-sizing: border-box;}
+        .form-render-btn:active { opacity: 0.8; }
+        .form-check-group { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+        .form-check-input { width: 18px; height: 18px; accent-color: var(--page-text); cursor: pointer; flex-shrink:0; }
+        .form-check-label { font-size: 14px; font-weight: 600; color: var(--page-text); cursor: pointer; }
+        .form-color-trigger { display: flex; align-items: center; gap: 10px; padding: 10px 14px; cursor: pointer; font-size: 14px; border: none; }
+        .color-indicator { width: 22px; height: 22px; border-radius: 50%; border: 2px solid rgba(128,128,128,0.3); }
+
+        /* 🌟 الأسئلة الشائعة 🌟 */
+        .linknest-faq { display: flex; flex-direction: column; gap: 10px; width: 100%; box-sizing: border-box; padding: 12px; }
+        .linknest-faq-item { border-radius: 12px; overflow: hidden; border: 1px solid rgba(128,128,128,0.1); transition: max-height 0.4s ease; background: var(--page-block-bg, rgba(128,128,128,0.05)); }
+        .linknest-faq-item summary { padding: 16px; font-weight: 600; cursor: pointer; list-style: none; display: flex; justify-content: space-between; align-items: center; color: var(--page-text); outline: none; transition: background 0.2s; text-align: left;}
+        .linknest-faq-item summary:active { background: rgba(128,128,128,0.1); }
+        .linknest-faq-item summary::-webkit-details-marker { display: none; }
+        .linknest-faq-item summary::after { content: '+'; font-size: 24px; font-weight: 300; transition: transform 0.3s ease; line-height: 1; flex-shrink: 0; margin-left: 10px;}
+        .linknest-faq-item[open] summary::after { content: '−'; transform: rotate(180deg); }
+        .linknest-faq-answer { padding: 0 16px 16px 16px; color: var(--page-text); opacity: 0.8; font-size: 14px; line-height: 1.6; text-align: left; animation: faqFadeIn 0.3s ease-in-out; }
+        @keyframes faqFadeIn { from { opacity: 0; transform: translateY(-5px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* 🌟 الأشرطة الثابتة 🌟 */
+        .bottom-nav { position: absolute; bottom: 0; left: 0; right: 0; height: 80px; background: #fff; border-top: 1px solid #f3f4f6; display: flex; justify-content: space-between; align-items: center; padding: 0 20px 10px; z-index: 10; transition: bottom 0.4s cubic-bezier(0.25, 1, 0.5, 1); }
+        .bottom-nav.hidden { bottom: -100px; }
+        .nav-item { display: flex; flex-direction: column; align-items: center; color: #6b7280; font-size: 11px; font-weight: 500; cursor: pointer; gap: 4px; }
+        .nav-item svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+        .nav-add-wrapper { position: relative; top: -20px; }
+        .add-btn { width: 56px; height: 56px; background: #3b82f6; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #fff; box-shadow: 0 8px 16px rgba(59,130,246,0.4); cursor: pointer; border: none; transition: transform 0.2s; }
+        .add-btn:active { transform: scale(0.95); }
+
+        .action-toolbar { position: absolute; bottom: -100px; left: 0; right: 0; height: 80px; background: #fff; border-top: 1px solid #f3f4f6; display: flex; justify-content: space-around; align-items: center; padding: 0 10px 10px; z-index: 15; transition: bottom 0.4s cubic-bezier(0.25, 1, 0.5, 1); }
+        .action-toolbar.active { bottom: 0; }
+        .action-item { display: flex; flex-direction: column; align-items: center; color: #4b5563; font-size: 11px; font-weight: 500; cursor: pointer; gap: 4px; transition: color 0.2s; }
+        .action-item:active { color: #111827; }
+        .action-item svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+        .action-close { width: 44px; height: 44px; background: #f3f4f6; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-right: 10px; cursor: pointer;}
+
+        .preview-toolbar { position: absolute; bottom: -100px; left: 50%; transform: translateX(-50%); background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px); padding: 8px 16px; border-radius: 40px; display: flex; gap: 16px; align-items: center; box-shadow: 0 10px 25px rgba(0,0,0,0.1); transition: bottom 0.4s cubic-bezier(0.25, 1, 0.5, 1); z-index: 50; border: 1px solid #e5e7eb;}
+        .preview-toolbar.active { bottom: 24px; }
+        .preview-btn { background: none; border: none; color: #4b5563; cursor: pointer; display: flex; align-items: center; justify-content: center; width: 40px; height: 40px; border-radius: 50%; transition: all 0.2s; }
+        .preview-btn:hover { background: #f3f4f6; }
+        .close-preview-btn { background: #fff; box-shadow: 0 2px 8px rgba(0,0,0,0.1); color: #111827; border: 1px solid #e5e7eb; }
+        .close-preview-btn:hover { background: #f9fafb; }
+
+        .toast { position: absolute; top: -100px; left: 50%; transform: translateX(-50%); background: #ffffff; color: #111827; padding: 14px 20px; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.15); font-weight: 600; font-size: 14px; display: flex; align-items: center; gap: 10px; transition: top 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); z-index: 100; border: 1px solid #e5e7eb; }
+        .toast.show { top: 15px; } 
+        .toast-icon { color: #10b981; display: flex; }
+
+        /* 🌟 النوافذ المنبثقة للتحرير (Bottom Sheets) 🌟 */
+        .sheet-overlay { position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 20; opacity: 0; pointer-events: none; transition: opacity 0.3s; }
+        .sheet-overlay.active { opacity: 1; pointer-events: auto; }
+        
+        .bottom-sheet { 
+            position: absolute; bottom: 0; left: 0; right: 0; 
+            background: #ffffff !important; border-radius: 24px 24px 0 0; 
+            z-index: 30; display: flex; flex-direction: column; max-height: 85%; 
+            box-shadow: 0 -5px 25px rgba(0,0,0,0.1);
+            transform: translateY(100%); 
+            visibility: hidden; 
+            transition: transform 0.4s cubic-bezier(0.25, 1, 0.5, 1), visibility 0.4s; 
+        }
+        .bottom-sheet.active { transform: translateY(0); visibility: visible; z-index: 40; }
+        
+        .sheet-header { padding: 16px 20px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #f3f4f6; flex-shrink: 0; background: #fff; border-radius: 24px 24px 0 0;}
+        .sheet-header-left { width: 33%; display: flex; align-items: center; }
+        .sheet-header-center { width: 33%; text-align: center; font-weight: 600; font-size: 16px; color: #111827; white-space: nowrap; }
+        .sheet-header-right { width: 33%; display: flex; justify-content: flex-end; align-items: center; }
+        .header-close-btn { background: none; border: none; color: #4b5563; cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 4px; }
+        .header-add-btn { background: none; border: none; font-size: 15px; font-weight: 700; color: #3b82f6; cursor: pointer; padding: 4px 8px; transition: opacity 0.2s;}
+        
+        .sheet-content { overflow-y: auto; display: flex; flex-direction: column; flex: 1; padding: 20px; }
+        .sheet-content::-webkit-scrollbar { width: 4px; }
+        .sheet-content::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 4px; }
+        
+        .form-input { width: 100%; border: 1px solid #e5e7eb; border-radius: 12px; padding: 12px 16px; font-size: 14px; outline: none; background: #f9fafb; font-family: inherit; transition: border-color 0.2s; box-sizing: border-box;}
+        .form-input:focus { border-color: #3b82f6; background: #fff;}
+        .form-label { font-size: 11px; font-weight: 700; color: #6b7280; margin-bottom: 6px; display: block; text-transform: uppercase; letter-spacing: 0.05em; padding-left: 4px;}
+
+        .menu-list-container { display: flex; flex-direction: column; gap: 8px; }
+        .block-option { display: flex; align-items: center; gap: 12px; padding: 12px 16px; background: #fff; border: 1px solid #f3f4f6; border-radius: 12px; cursor: pointer; font-weight: 500; font-size: 15px; color: #1f2937; box-shadow: 0 1px 2px rgba(0,0,0,0.02); }
+        .block-option-icon { color: #4b5563; display: flex; align-items: center; justify-content: center; }
+        .block-option-icon svg { width: 20px; height: 20px; }
+        .block-option-plus { margin-left: auto; color: #3b82f6; font-size: 20px; font-weight: 300; }
+
+        .rich-text-editor { flex: 1; min-height: 120px; padding: 16px 20px; font-size: 16px; outline: none; overflow-y: auto; direction: rtl; text-align: right; background: #f9fafb; border-radius: 12px; border: 1px solid #e5e7eb;}
+        .rich-text-editor[contenteditable="true"]:empty:before { content: attr(placeholder); color: #9ca3af; pointer-events: none; display: block; }
+        .editor-toolbar-scroll { display: flex; align-items: center; gap: 8px; padding: 12px 16px; border-top: 1px solid #e5e7eb; overflow-x: auto; scroll-behavior: smooth; -webkit-overflow-scrolling: touch; background: #fff; }
+        .editor-toolbar-scroll::-webkit-scrollbar { display: none; } 
+        .toolbar-btn { background: none; border: none; color: #4b5563; font-size: 16px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; white-space: nowrap; padding: 8px 10px; border-radius: 8px; transition: background 0.2s; }
+        .toolbar-btn:hover { background: #f3f4f6; color: #111827;}
+
+        .fe-live-preview-wrapper { background: #111827; border-radius: 16px; padding: 24px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); border: 1px solid rgba(255,255,255,0.1); margin-bottom: 8px; }
+        .fe-live-preview-wrapper .form-render-label { color: #ffffff !important; }
+
+        .btn-add-field { background: #eff6ff; color: #0058be; border: 1px solid transparent; padding: 14px; border-radius: 12px; font-weight: 600; font-size: 14px; display: flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer; width: 100%; transition: all 0.2s; }
+        .btn-add-field:hover { background: #e9edff; border-color: #d8e2ff; }
+
+        .form-field-card { display: flex; align-items: center; background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 12px; padding: 10px 14px; margin-bottom: 12px; transition: 0.2s; gap: 12px; flex-wrap: nowrap; cursor: pointer;}
+        .form-field-card.dragging { opacity: 0.5; border-style: dashed; }
+        .field-drag-handle { color: #9ca3af; cursor: grab; padding: 4px; background: none; border: none; touch-action: none; display: flex; flex-shrink: 0;}
+        .form-field-info { flex: 1; font-weight: 500; font-size: 14px; color: #111827; display: flex; align-items: center; gap: 8px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis;}
+        .btn-delete-field { width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; border-radius: 8px; color: #6b7280; background: none; border: none; cursor: pointer; transition: 0.2s; flex-shrink: 0;}
+        .btn-delete-field:hover { background: #fee2e2; color: #ef4444; }
+
+        .sticky-tools-footer { position: sticky; bottom: 0; background: #ffffff; border-top: 1px solid #e5e7eb; padding-bottom: env(safe-area-inset-bottom); z-index: 30; }
+        .tools-carousel { display: flex; align-items: center; gap: 8px; padding: 16px 20px; overflow-x: auto; scroll-behavior: smooth; -webkit-overflow-scrolling: touch; }
+        .tools-carousel::-webkit-scrollbar { display: none; }
+        .tool-item { flex-shrink: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; width: 72px; padding: 8px; border-radius: 12px; cursor: pointer; transition: background 0.2s; position: relative; }
+        .tool-item:hover { background: #eff6ff; }
+        .tool-item:hover .tool-item-icon { border-color: #adc6ff; color: #0058be; }
+        .tool-item-icon { width: 40px; height: 40px; border-radius: 50%; background: #f9fafb; border: 1px solid #e5e7eb; display: flex; align-items: center; justify-content: center; color: #111827; transition: all 0.2s; }
+        .tool-item-text { font-size: 11px; color: #6b7280; font-weight: 600; text-align: center; line-height: 1.2; }
+        .pro-badge-tool { position: absolute; top: 0px; right: 0px; background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); color: #ffffff; font-size: 9px; font-weight: 700; padding: 2px 6px; border-radius: 9999px; text-transform: uppercase; letter-spacing: 0.05em; z-index: 10; pointer-events: none; }
+
+        .toggle-switch { position: relative; width: 44px; height: 24px; appearance: none; background: #d1d5db; border-radius: 12px; outline: none; cursor: pointer; transition: background 0.3s; margin: 0; }
+        .toggle-switch::after { content: ''; position: absolute; top: 2px; left: 2px; width: 20px; height: 20px; background: white; border-radius: 50%; transition: transform 0.3s; box-shadow: 0 1px 2px rgba(0,0,0,0.2); }
+        .toggle-switch:checked { background: #3b82f6; }
+        .toggle-switch:checked::after { transform: translateX(20px); }
+
+        .style-menu-item { display: flex; align-items: center; gap: 16px; padding: 16px; background: #ffffff; border: 1px solid #e5e7eb; border-radius: 12px; cursor: pointer; font-weight: 500; color: #1f2937; box-shadow: 0 1px 2px rgba(0,0,0,0.02); transition: background 0.2s; }
+        .style-menu-item:hover { background: #f9fafb; }
+        .style-menu-item-icon { color: #4b5563; display: flex; align-items: center; justify-content: center; }
+        .pro-badge { background: #3b82f6; color: #fff; font-size: 10px; font-weight: 700; padding: 2px 5px; border-radius: 4px; margin-left: auto;}
+        
+        .themes-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; padding: 8px 0; }
+        .theme-card { display: flex; flex-direction: column; align-items: center; gap: 8px; cursor: pointer; position: relative;}
+        .theme-preview-box { width: 100%; aspect-ratio: 1; border-radius: 16px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; border: 2px solid transparent; transition: all 0.2s; }
+        .theme-preview-box.selected { border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59,130,246,0.2); }
+        .theme-mock-text { width: 60%; height: 12px; border-radius: 4px; }
+        .theme-card-title { font-size: 12px; font-weight: 500; color: #4b5563; text-align: center; }
+
+        .font-item { padding: 16px; border-bottom: 1px solid #e5e7eb; cursor: pointer; font-size: 16px; color: #111827; transition: background 0.2s; text-align: center; border-radius: 12px; background: #fff;}
+        .font-item:hover { background: #f9fafb; }
+
+        .color-picker-input-wrapper { display: flex; align-items: center; gap: 12px; background: #f9fafb; border: 1px solid #e5e7eb; padding: 8px 12px; border-radius: 12px; margin-bottom: 16px; }
+        .native-color-picker { width: 36px; height: 36px; border: none; border-radius: 8px; cursor: pointer; padding: 0; background: none; }
+        .native-color-picker::-webkit-color-swatch-wrapper { padding: 0; }
+        .native-color-picker::-webkit-color-swatch { border: 1px solid rgba(0,0,0,0.1); border-radius: 8px; }
+        .hex-display { font-family: monospace; font-size: 16px; font-weight: 600; color: #111827; flex: 1; text-transform: uppercase; border: none; background: transparent; outline: none; }
+        .radius-preview-box { width: 100%; height: 80px; background: #3b82f6; margin: 20px 0; transition: border-radius 0.2s; display: flex; align-items: center; justify-content: center; color: #fff; font-weight: 600; }
+
+        .modal-overlay { position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.7); z-index: 100; display: flex; align-items: center; justify-content: center; opacity: 0; pointer-events: none; transition: opacity 0.2s; }
+        .modal-overlay.active { opacity: 1; pointer-events: auto; }
+        .modal { background: #fff; width: 85%; max-width: 320px; border-radius: 20px; padding: 24px; text-align: center; transform: scale(0.95); transition: transform 0.2s; }
+        .modal-overlay.active .modal { transform: scale(1); }
+        .modal-title { font-weight: 700; margin-bottom: 12px; font-size: 18px; color: #111827; }
+        .modal-desc { color: #4b5563; font-size: 14px; margin-bottom: 24px; line-height: 1.5; }
+        .btn-danger, .btn-secondary { width: 100%; border: none; padding: 14px; border-radius: 12px; font-weight: 600; font-size: 15px; cursor: pointer; margin-bottom: 8px; transition: 0.2s; }
+        .btn-danger { background: #ef4444; color: #fff; }
+        .btn-danger:hover { background: #dc2626; }
+        .btn-secondary { background: #f3f4f6; color: #374151; }
+        .btn-secondary:hover { background: #e5e7eb; }
+
+        /* 🌟 النوافذ المنبثقة المنفصلة (Popups) 🌟 */
+        .popup-overlay { position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.4); z-index: 60; opacity: 0; pointer-events: none; transition: opacity 0.3s; }
+        .popup-overlay.active { opacity: 1; pointer-events: auto; }
+        
+        .popup-sheet { 
+            position: absolute; bottom: 0; left: 0; right: 0; 
+            background: #fff; z-index: 70; padding: 20px; border-radius: 24px 24px 0 0; 
+            box-shadow: 0 -10px 40px rgba(0,0,0,0.15); display: flex; flex-direction: column; gap: 16px; 
+            transform: translateY(100%); visibility: hidden;
+            transition: transform 0.3s cubic-bezier(0.25, 1, 0.5, 1), visibility 0.3s; 
+        }
+        .popup-sheet.active { transform: translateY(0); visibility: visible; }
+    </style>
+</head>
+<body>
+    <div class="phone-container">
+        <div class="phone-screen" id="phone-screen">
+            
+            <header class="header">
+                <a href="manage.html" class="header-btn" id="header-back-btn"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg></a>
+                <div class="header-title" id="header-title-text">Homepage</div>
+                <button class="header-btn" id="header-share-btn"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" x2="15.42" y1="13.51" y2="17.49"/><line x1="15.41" x2="8.59" y1="6.51" y2="10.49"/></svg></button>
+                <button class="btn-publish" id="header-publish-btn">Publish</button>
+            </header>
+
+            <div class="toast" id="success-toast">
+                <div class="toast-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
+                <span id="toast-message">Sent successfully!</span>
+            </div>
+
+            <main class="preview-area" id="preview-area">
+                <div class="empty-state" id="empty-state">
+                    <h2>Start building your website</h2>
+                    <p>Press the button below to add your first block</p>
+                    <div class="arrow-down">↓</div>
+                </div>
+            </main>
+
+            <nav class="bottom-nav" id="bottom-nav">
+                <div class="nav-item"><svg viewBox="0 0 24 24"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><line x1="3" x2="21" y1="9" y2="9"/><line x1="9" x2="9" y1="21" y2="9"/></svg>Pages</div>
+                <div class="nav-item" id="nav-style-btn"><svg viewBox="0 0 24 24"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/><path d="M5 3v4"/><path d="M19 17v4"/><path d="M3 5h4"/><path d="M17 19h4"/></svg>Style</div>
+                <div class="nav-add-wrapper"><button class="add-btn" id="open-choose-block-btn"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round"><line x1="12" x2="12" y1="5" y2="19"/><line x1="5" x2="19" y1="12" y2="12"/></svg></button></div>
+                <div class="nav-item" id="nav-preview-btn"><svg viewBox="0 0 24 24"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>Preview</div>
+                <div class="nav-item"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1Z"/></svg>Settings</div>
+            </nav>
+
+            <nav class="action-toolbar" id="action-toolbar">
+                <div class="action-close" id="action-close-btn"><svg viewBox="0 0 24 24"><line x1="18" x2="6" y1="6" y2="18"/><line x1="6" x2="18" y1="6" y2="18"/></svg></div>
+                <div class="action-item" id="action-edit-btn"><svg viewBox="0 0 24 24"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>Edit</div>
+                <div class="action-item" id="action-up-btn"><svg viewBox="0 0 24 24"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg>Up</div>
+                <div class="action-item" id="action-down-btn"><svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/></svg>Down</div>
+                <div class="action-item" id="action-delete-btn"><svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>Delete</div>
+                <div class="action-item" id="action-clone-btn"><svg viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>Clone</div>
+            </nav>
+
+            <div class="preview-toolbar" id="preview-toolbar">
+                <button class="preview-btn" id="preview-mobile-btn" style="color: #3b82f6;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg></button>
+                <button class="preview-btn close-preview-btn" id="close-preview-btn"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" x2="6" y1="6" y2="18"/><line x1="6" x2="18" y1="6" y2="18"/></svg></button>
+                <button class="preview-btn" id="preview-desktop-btn"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg></button>
+            </div>
+
+            <div class="sheet-overlay" id="sheet-overlay"></div>
+
+            <div class="bottom-sheet" id="sheet-choose-block">
+                <div class="sheet-header"><div class="sheet-header-left"><button class="header-close-btn" id="close-choose-block-btn"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" x2="6" y1="6" y2="18"/><line x1="6" x2="18" y1="6" y2="18"/></svg></button></div><div class="sheet-header-center">Choose block</div><div class="sheet-header-right"></div></div>
+                <div class="sheet-content">
+                    <div class="menu-list-container">
+                        <div class="block-option" id="select-profile-block"><div class="block-option-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg></div><span>Profile</span><span class="block-option-plus">+</span></div>
+                        <div class="block-option" id="select-text-block"><div class="block-option-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4 7 4 4 20 4 20 7"/><line x1="9" x2="15" y1="20" y2="20"/><line x1="12" x2="12" y1="4" y2="20"/></svg></div><span>Text</span><span class="block-option-plus">+</span></div>
+                        <div class="block-option" id="select-link-block"><div class="block-option-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg></div><span>Links</span><span class="block-option-plus">+</span></div>
+                        <div class="block-option" id="select-form-block"><div class="block-option-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><path d="M8 14h.01"/><path d="M12 14h.01"/><path d="M16 14h.01"/><path d="M8 18h.01"/><path d="M12 18h.01"/><path d="M16 18h.01"/></svg></div><span>Form</span><span class="block-option-plus">+</span></div>
+                        <div class="block-option" id="select-social-block"><div class="block-option-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"></circle><path d="M16 8v5a3 3 0 0 0 6 0v-1a10 10 0 1 0-3.92 7.94"></path></svg></div><span>Socials</span><span class="block-option-plus">+</span></div>
+                        <div class="block-option" id="select-video-block"><div class="block-option-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg></div><span>Video</span><span class="block-option-plus">+</span></div>
+                        <div class="block-option" id="select-faq-block">
+                            <div class="block-option-icon">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+                            </div>
+                            <span>Questions and answers</span>
+                            <span class="block-option-plus">+</span>
+                        </div>
+                        
+                        <div class="block-option" id="select-giphy-block">
+                            <div class="block-option-icon">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
+                            </div>
+                            <span>Giphy</span>
+                            <span class="block-option-plus">+</span>
+                        </div>
+                        
+                    </div>
+                </div>
+            </div>
+
+            <div class="bottom-sheet" id="sheet-giphy-editor">
+                 <div class="sheet-header" style="position: sticky; top: 0; background: #fff; z-index: 30;">
+                     <div class="sheet-header-left">
+                         <button class="header-close-btn" id="close-giphy-editor-btn">
+                             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" x2="6" y1="6" y2="18"/><line x1="6" x2="18" y1="6" y2="18"/></svg>
+                         </button>
+                     </div>
+                     <div class="sheet-header-center">Giphy</div>
+                     <div class="sheet-header-right">
+                         <button class="header-add-btn" id="save-giphy-btn">Add</button>
+                     </div>
+                </div>
+                <div class="sheet-content" style="padding-top: 10px;">
+                     <div id="giphy-live-preview-sheet" style="background:var(--page-bg); display:flex; justify-content:center; align-items:center; height:150px; margin-bottom:16px; border-radius:12px; border:1px solid #e5e7eb; overflow:hidden;">
+                        <span style="color:#9ca3af; font-size:14px; font-weight:600;">Select a GIF to preview</span>
+                     </div>
+                     
+                     <div style="position:relative; display:flex; align-items:center; margin-bottom:16px;">
+                         <input type="text" id="giphy-search-input" class="form-input" placeholder="Search Giphy..." autocomplete="off" style="padding-right: 50px; height: 46px;">
+                         <div style="position:absolute; right:0; top:0; bottom:0; width:46px; background:#e11d48; border-radius: 0 12px 12px 0; display:flex; justify-content:center; align-items:center; cursor:pointer;">
+                             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                         </div>
+                     </div>
+
+                     <div style="display:flex; gap:8px; margin-bottom:16px;">
+                        <button id="tab-gifs" style="flex:1; padding:10px; background:#3b82f6; color:#fff; border-radius:8px; border:none; font-weight:700; cursor:pointer; font-size:14px; transition:0.2s;">Gifs</button>
+                        <button id="tab-stickers" style="flex:1; padding:10px; background:#f3f4f6; color:#111827; border-radius:8px; border:none; font-weight:700; cursor:pointer; font-size:14px; transition:0.2s;">Stickers</button>
+                     </div>
+
+                     <div id="giphy-results-grid" style="display:grid; grid-template-columns: 1fr 1fr; gap:8px; max-height:220px; overflow-y:auto; padding-bottom:10px;">
+                         </div>
+                     
+                     <div style="text-align:center; margin-top:8px;">
+                         <span style="font-size:10px; font-weight:800; color:#9ca3af; letter-spacing:1px;">POWERED BY GIPHY</span>
+                     </div>
+                </div>
+            </div>
+
+            <div class="bottom-sheet" id="sheet-profile-editor">
+                <div class="sheet-header"><div class="sheet-header-left"><button class="header-close-btn" id="close-profile-editor-btn"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" x2="6" y1="6" y2="18"/><line x1="6" x2="18" y1="6" y2="18"/></svg></button></div><div class="sheet-header-center">Profile</div><div class="sheet-header-right"><button class="header-add-btn" id="add-profile-btn">Add</button></div></div>
+                <div id="profile-live-preview-sheet" style="background: #111827; display: flex; flex-direction: column; align-items: center; justify-content: center; padding-top: 24px; padding-bottom: 24px; position: relative; border-bottom: 1px solid #e5e7eb; transition: all 0.3s ease;">
+                    <div id="pe-cover-preview" style="position: absolute; top:0; left:0; right:0; height: 110px; background: rgba(255,255,255,0.05); background-size: cover; background-position: center; transition: all 0.3s ease;"></div>
+                    <div id="pe-avatar-preview" style="width: 80px; height: 80px; border-radius: 50%; border: 3px solid #111827; background: #e5e7eb; position: relative; z-index: 2; background-size: cover; background-position: center; margin-top: 20px; transition: all 0.3s ease;"></div>
+                    <div id="pe-title-preview" style="color: #fff; font-size: 20px; font-weight: 700; margin-top: 12px; position: relative; z-index: 2; text-align: center; padding: 0 10px;">Header</div>
+                    <div id="pe-subtitle-preview" style="color: #fff; font-size: 14px; font-weight: 500; opacity: 0.7; margin-top: 4px; position: relative; z-index: 2; text-align: center; padding: 0 10px;">Subheader</div>
+                </div>
+                <div class="sheet-content" style="gap: 16px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px; background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 12px;">
+                        <span style="font-weight: 600; font-size: 13px; color: #111827; display: flex; align-items: center; gap: 8px;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M18 21v-2a4 4 0 0 0-4-4H10a4 4 0 0 0-4 4v2"/></svg> Avatar photo</span>
+                        <label for="profile-upload-avatar" style="background: #3b82f6; color: #fff; padding: 6px 14px; border-radius: 8px; font-weight: 600; font-size: 12px; cursor: pointer;">Upload</label>
+                        <input type="file" id="profile-upload-avatar" accept="image/*" style="display:none;">
+                    </div>
+                    <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px; background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 12px;">
+                        <span style="font-weight: 600; font-size: 13px; color: #111827; display: flex; align-items: center; gap: 8px;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg> Cover photo</span>
+                        <label for="profile-upload-cover" style="background: #3b82f6; color: #fff; padding: 6px 14px; border-radius: 8px; font-weight: 600; font-size: 12px; cursor: pointer;">Upload</label>
+                        <input type="file" id="profile-upload-cover" accept="image/*" style="display:none;">
+                    </div>
+                    <div style="display: flex; flex-direction: column; gap: 6px;">
+                        <label class="form-label" style="text-transform:none; font-size:13px; color:#111827;">Title *</label>
+                        <input type="text" class="form-input" id="profile-title-input" placeholder="Enter text" maxlength="100">
+                        <div id="profile-title-error" style="color: #ef4444; font-size: 12px; font-weight: 600; display: none;">This field must not be empty</div>
+                    </div>
+                    <div style="display: flex; flex-direction: column; gap: 6px;">
+                        <label class="form-label" style="text-transform:none; font-size:13px; color:#111827;">Subtitle</label>
+                        <input type="text" class="form-input" id="profile-subtitle-input" placeholder="Enter text" maxlength="100">
+                    </div>
+                </div>
+            </div>
+
+            <div class="bottom-sheet" id="sheet-text-editor">
+                <div class="sheet-header"><div class="sheet-header-left"><button class="header-close-btn" id="close-text-editor-btn"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" x2="6" y1="6" y2="18"/><line x1="6" x2="18" y1="6" y2="18"/></svg></button></div><div class="sheet-header-center">Text</div><div class="sheet-header-right"><button class="header-add-btn" id="add-text-btn">Add</button></div></div>
+                <div class="sheet-content" style="padding:0;">
+                    <div class="rich-text-editor" id="text-input" contenteditable="true" style="margin: 20px; border: 1px solid #e5e7eb; border-radius: 12px; background: #f9fafb;"></div>
+                </div>
+                <div class="editor-toolbar-scroll" style="background:#fff; border-top: 1px solid #e5e7eb;">
+                    <button type="button" class="toolbar-btn" id="btn-open-format">Paragraph</button>
+                    <button type="button" class="toolbar-btn text-format-btn" data-command="bold"><b>B</b></button>
+                    <button type="button" class="toolbar-btn text-format-btn" data-command="italic"><i>I</i></button>
+                    <button type="button" class="toolbar-btn text-format-btn" data-command="underline"><u>U</u></button>
+                </div>
+            </div>
+
+            <div class="bottom-sheet" id="sheet-text-format">
+                <div class="sheet-header"><div class="sheet-header-left"><button class="header-close-btn" id="close-text-format-btn"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" x2="6" y1="6" y2="18"/><line x1="6" x2="18" y1="6" y2="18"/></svg></button></div><div class="sheet-header-center">Paragraph</div><div class="sheet-header-right"></div></div>
+                <div class="sheet-content">
+                    <div class="menu-list-container">
+                        <div class="style-menu-item format-option" data-format="H1"><span style="font-size:20px; font-weight:700;">Large Title</span></div>
+                        <div class="style-menu-item format-option" data-format="H2"><span style="font-size:18px; font-weight:600;">Title</span></div>
+                        <div class="style-menu-item format-option" data-format="P"><span style="font-size:15px; color:#3b82f6;">Paragraph</span></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bottom-sheet" id="sheet-link-editor">
+                <div class="sheet-header"><div class="sheet-header-left"><button class="header-close-btn" id="close-link-editor-btn"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" x2="6" y1="6" y2="18"/><line x1="6" x2="18" y1="6" y2="18"/></svg></button></div><div class="sheet-header-center">Links</div><div class="sheet-header-right"><button class="header-add-btn" id="add-link-btn">Add</button></div></div>
+                <div class="sheet-content">
+                    <div style="display: flex; flex-direction: column; gap: 6px;"><label class="form-label" style="text-transform:uppercase; font-size:11px; letter-spacing:1px; color:#6b7280;">Link title</label><input type="text" class="form-input" id="link-title-input"></div>
+                    <div style="display: flex; flex-direction: column; gap: 6px;"><label class="form-label" style="text-transform:uppercase; font-size:11px; letter-spacing:1px; color:#6b7280;">URL</label><input type="url" class="form-input" id="link-url-input"></div>
+                </div>
+            </div>
+
+            <div class="bottom-sheet" id="sheet-form-editor">
+                <div class="sheet-header sticky top-0" style="background: #fff; z-index:30;">
+                    <div class="sheet-header-left"><button class="header-close-btn" id="close-form-editor-btn"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" x2="6" y1="6" y2="18"/><line x1="6" x2="18" y1="6" y2="18"/></svg></button></div>
+                    <div class="sheet-header-center">Request Form</div>
+                    <div class="sheet-header-right"><button class="header-add-btn" id="add-form-btn">Add</button></div>
+                </div>
+                <div class="sheet-content" style="gap: 24px;">
+                    <section style="display:flex; flex-direction:column; gap:8px;">
+                        <h3 class="form-label" style="margin-top:0;">Live Preview</h3>
+                        <div class="fe-live-preview-wrapper" id="fe-live-preview"></div>
+                    </section>
+                    <section style="display:flex; flex-direction:column; gap:16px;">
+                        <div style="display:flex; flex-direction:column; gap:6px;"><label class="form-label" style="text-transform:uppercase; font-size:11px; letter-spacing:1px;">Send button label</label><input type="text" class="form-input" id="form-btn-label-input" value="Send"></div>
+                        <div style="display:flex; flex-direction:column; gap:6px;"><label class="form-label" style="text-transform:uppercase; font-size:11px; letter-spacing:1px;">Text after submission</label><input type="text" class="form-input" id="form-success-text-input" value="Sent successfully!"></div>
+                    </section>
+                    <section style="display:flex; flex-direction:column;">
+                        <h3 class="form-label" style="margin-bottom:8px;">Form Fields</h3>
+                        <div id="form-fields-list-container" style="display:flex; flex-direction:column; gap:12px; margin-bottom: 12px;"></div>
+                        <button class="btn-add-field" id="btn-open-choose-field"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> Add one more field</button>
+                    </section>
+                </div>
+            </div>
+
+            <div class="bottom-sheet" id="sheet-social-editor">
+                 <div class="sheet-header">
+                     <div class="sheet-header-left"><button class="header-close-btn" id="close-social-editor-btn"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" x2="6" y1="6" y2="18"/><line x1="6" x2="18" y1="6" y2="18"/></svg></button></div>
+                     <div class="sheet-header-center">Socials</div>
+                     <div class="sheet-header-right"><button class="header-add-btn" id="save-social-btn">Add</button></div>
+                </div>
+                <div id="social-live-preview-sheet" style="background: #111827; display:flex; justify-content:center; align-items:center; min-height:100px; border-bottom:1px solid #e5e7eb; transition:0.3s;"></div>
+                <div class="sheet-content">
+                     <button class="btn-add-field" id="btn-add-social-link" style="background: #3b82f6; color: #fff; border-radius: 12px; border:none; padding:14px; font-size:14px; margin-bottom: 16px; margin-top:0;">+ Add social network link</button>
+                     <div id="social-links-container" style="display: flex; flex-direction: column; gap: 12px;"></div>
+                </div>
+            </div>
+
+            <div class="bottom-sheet" id="sheet-video-editor">
+                 <div class="sheet-header" style="position: sticky; top: 0; background: #fff; z-index: 30;">
+                     <div class="sheet-header-left"><button class="header-close-btn" id="close-video-editor-btn"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" x2="6" y1="6" y2="18"/><line x1="6" x2="18" y1="6" y2="18"/></svg></button></div>
+                     <div class="sheet-header-center">Video</div>
+                     <div class="sheet-header-right"><button class="header-add-btn" id="save-video-btn">Add</button></div>
+                </div>
+                <div class="sheet-content">
+                     <div id="video-live-preview-sheet" style="background:var(--page-bg); display:block; min-height:80px; max-height:240px; overflow-y:auto; overflow-x:hidden; margin-bottom:16px; border-radius:12px; border:1px solid #e5e7eb; transition:0.3s; width:100%; box-sizing:border-box;"></div>
+                     <button class="btn-add-field" id="btn-add-video-link" style="background: #3b82f6; color: #fff; border-radius: 12px; border:none; padding:14px; font-size:14px; margin-bottom: 16px;">+ Add another video</button>
+                     <div id="video-links-container" style="display: flex; flex-direction: column; gap: 12px;"></div>
+                </div>
+            </div>
+
+            <div class="bottom-sheet" id="sheet-faq-editor">
+                 <div class="sheet-header" style="position: sticky; top: 0; background: #fff; z-index: 30;">
+                     <div class="sheet-header-left"><button class="header-close-btn" id="close-faq-editor-btn"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" x2="6" y1="6" y2="18"/><line x1="6" x2="18" y1="6" y2="18"/></svg></button></div>
+                     <div class="sheet-header-center">Questions and answers</div>
+                     <div class="sheet-header-right"><button class="header-add-btn" id="save-faq-btn">Add</button></div>
+                </div>
+                <div class="sheet-content">
+                     <div id="faq-live-preview-sheet" style="background:var(--page-bg); display:block; min-height:80px; max-height:300px; overflow-y:auto; overflow-x:hidden; margin-bottom:16px; border-radius:12px; border:1px solid #e5e7eb; transition:0.3s; width:100%; box-sizing:border-box;"></div>
+                     <div id="faq-items-container" style="display: flex; flex-direction: column; gap: 12px; margin-bottom: 16px;"></div>
+                     <button class="btn-add-field" id="btn-add-faq-item" style="background: #3b82f6; color: #fff; border-radius: 12px; border:none; padding:14px; font-size:14px;">+ Add question</button>
+                </div>
+            </div>
+
+            <div class="popup-overlay" id="social-popup-overlay"></div>
+            <div class="popup-sheet" id="sheet-social-link-input">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <button class="header-close-btn" id="close-social-input-modal"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" x2="6" y1="6" y2="18"/><line x1="6" x2="18" y1="6" y2="18"/></svg></button>
+                    <span style="font-weight: 600; font-size: 15px; color:#111827;">Social network link</span>
+                    <button id="save-social-input-modal" style="color: #3b82f6; font-weight: 700; background: none; border: none; font-size: 15px; cursor: pointer;">Add</button>
+                </div>
+                <div>
+                    <input type="text" id="social-url-input" class="form-input" placeholder="Paste social network link" autocomplete="off">
+                    <div id="social-input-error" style="color: #ef4444; font-size: 12px; font-weight: 600; margin-top: 6px; display: none;">This field must not be empty</div>
+                </div>
+            </div>
+
+            <div class="popup-overlay" id="faq-popup-overlay"></div>
+            <div class="popup-sheet" id="sheet-faq-item-input">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <button class="header-close-btn" id="close-faq-input-modal"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" x2="6" y1="6" y2="18"/><line x1="6" x2="18" y1="6" y2="18"/></svg></button>
+                    <span style="font-weight: 600; font-size: 15px; color:#111827;">Question and answer</span>
+                    <button id="save-faq-input-modal" style="color: #3b82f6; font-weight: 700; background: none; border: none; font-size: 15px; cursor: pointer;">Add</button>
+                </div>
+                <div>
+                    <label class="form-label" style="text-transform:none; font-size:13px; color:#111827;">Question *</label>
+                    <input type="text" id="faq-q-input" class="form-input" placeholder="Enter question" autocomplete="off" style="margin-bottom: 12px;">
+                    <label class="form-label" style="text-transform:none; font-size:13px; color:#111827;">Answer *</label>
+                    <textarea id="faq-a-input" class="form-input" placeholder="Enter answer" style="min-height: 80px; resize: none; font-family: inherit;"></textarea>
+                    <div id="faq-input-error" style="color: #ef4444; font-size: 12px; font-weight: 600; margin-top: 6px; display: none;">Both fields must not be empty</div>
+                </div>
+            </div>
+
+            <div class="bottom-sheet" id="sheet-choose-field"><div class="sheet-header"><div class="sheet-header-left"><button class="header-close-btn" id="close-choose-field-btn"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" x2="6" y1="6" y2="18"/><line x1="6" x2="18" y1="6" y2="18"/></svg></button></div><div class="sheet-header-center">Choose field type</div><div class="sheet-header-right"></div></div><div class="sheet-content"><div class="menu-list-container" id="field-types-list"></div></div></div>
+            <div class="bottom-sheet" id="sheet-form-field"><div class="sheet-header"><div class="sheet-header-left"><button class="header-close-btn" id="close-form-field-btn"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" x2="6" y1="6" y2="18"/><line x1="6" x2="18" y1="6" y2="18"/></svg></button></div><div class="sheet-header-center">Form Field</div><div class="sheet-header-right"><button class="header-add-btn" id="save-form-field-btn">Save</button></div></div><div class="sheet-content"><label class="form-label" style="margin-top:0;">Field label</label><input type="text" class="form-input" id="field-label-input" value="Email"><div style="display: flex; justify-content: space-between; align-items: center; margin-top: 16px; padding-top: 16px; border-top: 1px solid #e5e7eb;"><span style="font-size: 15px; font-weight: 600; color: #111827;">Is field required</span><input type="checkbox" class="toggle-switch" id="field-required-toggle" checked></div></div></div>
+            <div class="bottom-sheet" id="sheet-form-radius"><div class="sheet-header"><div class="sheet-header-left"><button class="header-close-btn" id="close-form-radius-btn"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" x2="6" y1="6" y2="18"/><line x1="6" x2="18" y1="6" y2="18"/></svg></button></div><div class="sheet-header-center">Round Corners <span class="pro-badge">Pro</span></div><div class="sheet-header-right"><button class="header-add-btn" id="save-form-radius-btn">Save</button></div></div><div class="sheet-content"><div class="radius-preview-box" id="radius-preview-box" style="border-radius: 12px;">Preview Shape</div><label class="form-label">Border Radius (px)</label><input type="number" class="form-input" id="input-form-radius" value="12" min="0" max="32"></div></div>
+            <div class="bottom-sheet" id="sheet-form-sticker"><div class="sheet-header"><div class="sheet-header-left"><button class="header-close-btn" id="close-form-sticker-btn"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" x2="6" y1="6" y2="18"/><line x1="6" x2="18" y1="6" y2="18"/></svg></button></div><div class="sheet-header-center">Labels <span class="pro-badge">Pro</span></div><div class="sheet-header-right"></div></div><div class="sheet-content text-center" style="align-items: center;"><label class="btn-add-field" for="input-form-sticker" style="border-radius:12px; width:100%; height:auto; padding:16px; cursor:pointer;"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg> Upload Image</label><input type="file" id="input-form-sticker" accept="image/png" style="display:none;"><p style="color: #ef4444; font-size: 12px; margin-top: 8px; font-weight:600;">PNG format only!</p></div></div>
+            <div class="bottom-sheet" id="sheet-form-placeholder"><div class="sheet-header"><div class="sheet-header-left"><button class="header-close-btn" id="close-form-placeholder-btn"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" x2="6" y1="6" y2="18"/><line x1="6" x2="18" y1="6" y2="18"/></svg></button></div><div class="sheet-header-center">Inputs text <span class="pro-badge">Pro</span></div><div class="sheet-header-right"><button class="header-add-btn" id="save-form-placeholder-btn">Save</button></div></div><div class="sheet-content"><div class="menu-list-container" id="placeholders-list-container"></div></div></div>
+
+            <div class="bottom-sheet" id="sheet-style-menu"><div class="sheet-header"><div class="sheet-header-left"><button class="header-close-btn" id="close-style-menu-btn"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" x2="6" y1="6" y2="18"/><line x1="6" x2="18" y1="6" y2="18"/></svg></button></div><div class="sheet-header-center">Page decoration</div><div class="sheet-header-right"></div></div><div class="sheet-content"><div class="menu-list-container"><div class="style-menu-item" id="btn-open-themes" style="margin-bottom: 0;"><div class="style-menu-item-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><path d="M3 9h18"/><path d="M9 21V9"/></svg></div>Theme</div><div class="style-menu-item" id="btn-open-bg-color" style="margin-bottom: 0;"><div class="style-menu-item-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg></div>Background color <span class="pro-badge">Pro</span></div><div class="style-menu-item" id="btn-open-bg-image" style="margin-bottom: 0;"><div class="style-menu-item-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg></div>Background image <span class="pro-badge">Pro</span></div><div class="style-menu-item" id="btn-open-fonts" style="margin-bottom: 0;"><div class="style-menu-item-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4 7 4 4 20 4 20 7"/><line x1="9" x2="15" y1="20" y2="20"/><line x1="12" x2="12" y1="4" y2="20"/></svg></div>Fonts <span class="pro-badge">Pro</span></div></div></div></div>
+            <div class="bottom-sheet" id="sheet-themes"><div class="sheet-header"><div class="sheet-header-left"><button class="header-close-btn" id="close-themes-btn"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" x2="6" y1="6" y2="18"/><line x1="6" x2="18" y1="6" y2="18"/></svg></button></div><div class="sheet-header-center">Themes</div><div class="sheet-header-right"><button class="header-add-btn" id="apply-theme-btn">Apply</button></div></div><div class="sheet-content"><div class="themes-grid" id="themes-grid-container"></div></div></div>
+            <div class="bottom-sheet" id="sheet-bg-image"><div class="sheet-header"><div class="sheet-header-left"><button class="header-close-btn" id="close-bg-image-btn"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" x2="6" y1="6" y2="18"/><line x1="6" x2="18" y1="6" y2="18"/></svg></button></div><div class="sheet-header-center">Background Image <span class="pro-badge" style="margin-left: 5px;">Pro</span></div><div class="sheet-header-right"></div></div><div class="sheet-content text-center" style="align-items: center; justify-content: center; display: flex; flex-direction: column;"><label class="btn-add-field" for="input-bg-image-upload" style="border-radius:12px; width:100%; padding:16px; cursor:pointer;"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg> Upload from device</label><input type="file" id="input-bg-image-upload" accept="image/*" style="display:none;"><p style="color: #6b7280; font-size: 12px; margin-top: 8px;">Supports JPG, PNG.</p></div></div>
+            <div class="bottom-sheet" id="sheet-fonts"><div class="sheet-header"><div class="sheet-header-left"><button class="header-close-btn" id="close-fonts-btn"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" x2="6" y1="6" y2="18"/><line x1="6" x2="18" y1="6" y2="18"/></svg></button></div><div class="sheet-header-center">Fonts <span class="pro-badge" style="margin-left: 5px;">Pro</span></div><div class="sheet-header-right"></div></div><div class="sheet-content"><div class="menu-list-container" id="fonts-list-container"></div></div></div>
+
+            <div class="modal-overlay" id="color-picker-modal"><div class="modal" style="padding: 24px; text-align: left;"><h4 class="modal-title" style="font-size: 16px; margin-bottom: 16px; text-align:center;" id="color-picker-title">Choose Color</h4><div class="color-picker-input-wrapper"><input type="color" class="native-color-picker" id="native-color-picker" value="#3b82f6"><input type="text" class="hex-display" id="hex-color-display" value="#3b82f6" readonly></div><div style="display:flex; gap:10px;"><button class="btn-secondary" id="close-color-picker-btn" style="margin:0;">Cancel</button><button class="btn-danger" id="apply-color-btn" style="margin:0; background:#3b82f6;">Apply</button></div></div></div>
+            
+            <div class="modal-overlay" id="confirm-modal"><div class="modal"><h4 class="modal-title" style="font-size:18px; margin-bottom:8px;">تنبيه</h4><p class="modal-desc" style="font-size:14px; color:#4b5563;">توجد تغييرات لم يتم حفظها. هل انت مستعد للمغادره بدون حفظ التعديلات ؟</p><button class="btn-danger" id="modal-leave-btn">مغادرة بدون حفظ</button><button class="btn-secondary" id="modal-back-btn">رجوع</button></div></div>
+            <div class="modal-overlay" id="delete-modal"><div class="modal"><h4 class="modal-title">Delete blocks?</h4><p class="modal-desc">Do you really want to delete blocks? This action is not reversible.</p><button class="btn-secondary" id="delete-cancel-btn">Cancel</button><button class="btn-danger" id="delete-confirm-btn">Delete blocks</button></div></div>
+
+        </div>
+    </div>
+    <script src="js/editor.js"></script>
+</body>
+</html>

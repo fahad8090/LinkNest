@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html class="light" lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta content="width=device-width, initial-scale=1.0" name="viewport">
+    <title>LinkNest - Manage Website</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet">
+    <script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "primary": "#3b82f6",
+                        "primary-fixed": "#d8e2ff",
+                        "surface": "#ffffff",
+                        "background": "#f4f5f7",
+                        "border-base": "#e5e7eb",
+                        "text-main": "#111827",
+                        "text-muted": "#6b7280",
+                        "on-surface": "#141b2b",
+                        "on-surface-variant": "#424754",
+                        "surface-container-low": "#f1f3ff",
+                        "surface-container-high": "#e1e8fd"
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { font-family: 'Inter', sans-serif; -webkit-font-smoothing: antialiased; }
+        .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
+        .pro-gradient { background: linear-gradient(135deg, #3b82f6 0%, #0070f3 100%); }
+        .shadow-soft { box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05); }
+        .scrollbar-hide::-webkit-scrollbar { display: none; }
+        .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+        
+        /* 🌟 Bottom Sheets Styles 🌟 */
+        .sheet-overlay { position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.4); z-index: 60; opacity: 0; pointer-events: none; transition: opacity 0.3s; backdrop-filter: blur(2px); }
+        .sheet-overlay.active { opacity: 1; pointer-events: auto; }
+        .bottom-sheet { position: absolute; bottom: -100%; left: 0; right: 0; background: #f9fafb !important; border-radius: 32px 32px 0 0; z-index: 70; transition: bottom 0.3s cubic-bezier(0.175, 0.885, 0.32, 1); display: flex; flex-direction: column; max-height: 92%; height: 92%; box-shadow: 0 -10px 40px rgba(0,0,0,0.15); }
+        .bottom-sheet.active { bottom: 0; }
+        
+        /* 🌟 Status Badges & Colors 🌟 */
+        .status-new { background: #3b82f6; color: white; }
+        .status-progress { background: #f59e0b; color: white; }
+        .status-done { background: #10b981; color: white; }
+        .status-canceled { background: #6b7280; color: white; }
+
+        /* Toast */
+        .toast { position: absolute; top: -100px; left: 50%; transform: translateX(-50%); background: #111827; color: #fff; padding: 12px 24px; border-radius: 99px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); font-weight: 600; font-size: 13px; display: flex; align-items: center; gap: 8px; transition: top 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); z-index: 100; width:max-content;}
+        .toast.show { top: 20px; }
+    </style>
+</head>
+<body class="bg-[#f0f2f5] flex items-center justify-center min-h-screen p-4">
+    <div class="relative w-full max-w-[440px] h-[92vh] max-h-[880px] bg-surface rounded-[40px] border-[10px] border-black shadow-2xl overflow-hidden flex flex-col">
+        
+        <header class="flex justify-between items-center px-4 pt-6 pb-4 bg-surface z-10 border-b border-border-base relative">
+            <a href="user.html" class="p-2 -ml-2 hover:bg-gray-100 rounded-full transition-colors active:scale-95 flex items-center justify-center">
+                <span class="material-symbols-outlined text-text-main">arrow_back</span>
+            </a>
+            <h1 class="font-bold text-[18px] text-text-main absolute left-1/2 -translate-x-1/2">Dashboard</h1>
+            <button id="btn-logout" class="p-2 -mr-2 hover:bg-red-50 text-red-500 rounded-full transition-colors active:scale-95 flex items-center justify-center" title="Log Out">
+                <span class="material-symbols-outlined">logout</span>
+            </button>
+        </header>
+
+        <div class="toast" id="crm-toast"><span class="material-symbols-outlined text-[18px] text-green-400">check_circle</span> <span id="crm-toast-msg">Copied!</span></div>
+
+        <main class="flex-1 overflow-y-auto px-4 pb-10 space-y-4 scrollbar-hide bg-background pt-4">
+            <section class="bg-surface border border-border-base rounded-3xl p-5 shadow-soft">
+                <div class="flex flex-col items-center text-center space-y-1">
+                    <span class="text-[12px] font-bold text-text-muted uppercase tracking-widest">Your Link</span>
+                    <h2 id="display-slug" class="font-bold text-[22px] text-on-surface">linknest.com/...</h2>
+                </div>
+                <div class="flex justify-between items-center mt-6 gap-3">
+                    <button class="flex-1 bg-gray-50 hover:bg-gray-100 py-3 rounded-full flex items-center justify-center gap-2 transition-all active:scale-95 border border-border-base"><span class="material-symbols-outlined text-[20px] text-gray-600">content_copy</span><span class="font-semibold text-[13px] text-gray-700">Copy</span></button>
+                    <button class="flex-1 bg-gray-50 hover:bg-gray-100 py-3 rounded-full flex items-center justify-center gap-2 transition-all active:scale-95 border border-border-base"><span class="material-symbols-outlined text-[20px] text-gray-600">qr_code_2</span><span class="font-semibold text-[13px] text-gray-700">QR</span></button>
+                    <button class="flex-1 bg-gray-50 hover:bg-gray-100 py-3 rounded-full flex items-center justify-center gap-2 transition-all active:scale-95 border border-border-base"><span class="material-symbols-outlined text-[20px] text-gray-600">ios_share</span><span class="font-semibold text-[13px] text-gray-700">Share</span></button>
+                </div>
+            </section>
+
+            <a href="editor.html" class="pro-gradient rounded-3xl p-5 flex items-center justify-between text-white cursor-pointer hover:shadow-lg transition-all active:scale-[0.98] block" style="text-decoration:none;">
+                <div class="flex items-center gap-4">
+                    <div class="w-12 h-12 rounded-2xl bg-white/20 flex items-center justify-center"><span class="material-symbols-outlined text-white" style="font-variation-settings: 'FILL' 1;">magic_button</span></div>
+                    <div><h3 class="font-bold text-[18px] leading-tight">Quick Edit</h3><p class="text-[13px] font-medium opacity-90 mt-0.5">Modify layout and colors</p></div>
+                </div>
+                <span class="material-symbols-outlined">arrow_forward</span>
+            </a>
+
+            <div class="grid grid-cols-2 gap-4 mt-2">
+                <div class="bg-surface border border-border-base rounded-3xl flex flex-col hover:border-primary/30 transition-all cursor-pointer gap-2 py-4 px-5 shadow-sm">
+                    <span class="material-symbols-outlined text-primary text-[32px]">leaderboard</span>
+                    <div class="mt-2"><h4 class="font-bold text-[16px] text-text-main">Analytics</h4><p class="text-[12px] font-medium text-text-muted mt-0.5">2.4k Views</p></div>
+                </div>
+
+                <div id="btn-open-requests" class="bg-surface border border-border-base rounded-3xl flex flex-col hover:border-primary/30 transition-all cursor-pointer relative overflow-hidden gap-2 py-4 px-5 shadow-sm">
+                    <div class="flex justify-between items-start">
+                        <span class="material-symbols-outlined text-orange-500 text-[32px]">mail</span>
+                        <span id="main-requests-badge" class="bg-black text-white text-[10px] px-2.5 py-1 rounded-full font-bold">0 NEW</span>
+                    </div>
+                    <div class="mt-2"><h4 class="font-bold text-[16px] text-text-main">Requests</h4><p class="text-[12px] font-medium text-text-muted mt-0.5">Manage forms</p></div>
+                </div>
+
+                <div class="bg-surface border border-border-base rounded-3xl flex flex-col hover:border-primary/30 transition-all cursor-pointer gap-2 py-4 px-5 shadow-sm">
+                    <span class="material-symbols-outlined text-emerald-500 text-[32px]">group</span>
+                    <div class="mt-2"><h4 class="font-bold text-[16px] text-text-main">Audience</h4><p class="text-[12px] font-medium text-text-muted mt-0.5">Manage fans</p></div>
+                </div>
+
+                <div class="bg-surface border border-border-base rounded-3xl flex flex-col hover:border-primary/30 transition-all cursor-pointer gap-2 py-4 px-5 shadow-sm">
+                    <span class="material-symbols-outlined text-purple-500 text-[32px]">shopping_bag</span>
+                    <div class="mt-2"><h4 class="font-bold text-[16px] text-text-main">Products</h4><p class="text-[12px] font-medium text-text-muted mt-0.5">4 Active items</p></div>
+                </div>
+
+                <div class="col-span-2 bg-surface border border-border-base rounded-3xl p-5 flex items-center justify-between shadow-sm cursor-pointer hover:border-primary/30 transition-all active:scale-[0.98]">
+                    <div class="flex items-center gap-4"><div class="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center"><span class="material-symbols-outlined text-gray-600">settings</span></div><h4 class="font-bold text-[16px] text-text-main">Global Settings</h4></div><span class="material-symbols-outlined text-gray-400">chevron_right</span>
+                </div>
+
+                <div class="col-span-2 bg-gradient-to-r from-[#fffbeb] to-[#fef3c7] border border-[#fde68a] rounded-3xl p-5 flex items-center justify-between shadow-sm cursor-pointer hover:border-[#fbbf24] transition-all active:scale-[0.98]">
+                    <div class="flex items-center gap-4">
+                        <div class="w-12 h-12 rounded-full bg-yellow-100 flex items-center justify-center shadow-inner"><span class="material-symbols-outlined text-yellow-600">workspace_premium</span></div>
+                        <div><h4 class="font-bold text-[16px] text-text-main">Upgrade Plan</h4><p class="text-[12px] font-medium text-yellow-700 mt-0.5">Unlock pro features</p></div>
+                    </div>
+                    <span class="material-symbols-outlined text-yellow-600">arrow_forward</span>
+                </div>
+            </div>
+            <div class="h-10"></div>
+        </main>
+
+        <div class="sheet-overlay" id="sheet-overlay"></div>
+
+        <div class="bottom-sheet" id="sheet-requests-list">
+            <header class="bg-surface rounded-t-[32px] border-b border-border-base sticky top-0 z-20 flex-shrink-0">
+                <div class="w-12 h-1.5 bg-gray-300 rounded-full mx-auto mt-3 mb-2"></div>
+                <div class="flex justify-between items-center px-4 pb-2">
+                    <button class="p-2 hover:bg-gray-100 rounded-full" id="close-requests-list-btn"><span class="material-symbols-outlined">close</span></button>
+                    <h2 class="font-bold text-[18px] text-text-main">Requests list</h2>
+                    <div class="w-10"></div>
+                </div>
+                <div class="px-4 pb-2">
+                    <div class="flex items-center bg-gray-100 rounded-xl px-4 py-2.5">
+                        <span class="material-symbols-outlined text-gray-500 mr-2">search</span>
+                        <input type="text" class="bg-transparent border-none outline-none w-full text-[14px] text-text-main placeholder-gray-500" placeholder="Search requests...">
+                    </div>
+                </div>
+                <nav class="grid grid-cols-4 w-full border-t border-border-base" id="crm-tabs">
+                    <button class="tab-btn active flex flex-col items-center justify-center py-2.5 border-b-2" data-status="new" style="border-color: #3b82f6;">
+                        <span class="font-bold text-[12px] text-blue-600 transition-colors" id="tab-text-new">New <span class="text-[10px] opacity-80">(<span id="count-new">0</span>)</span></span>
+                    </button>
+                    <button class="tab-btn flex flex-col items-center justify-center py-2.5 border-b-2 border-transparent" data-status="progress">
+                        <span class="font-bold text-[12px] text-gray-400 transition-colors" id="tab-text-progress">Progress <span class="text-[10px] opacity-80">(<span id="count-progress">0</span>)</span></span>
+                    </button>
+                    <button class="tab-btn flex flex-col items-center justify-center py-2.5 border-b-2 border-transparent" data-status="done">
+                        <span class="font-bold text-[12px] text-gray-400 transition-colors" id="tab-text-done">Done <span class="text-[10px] opacity-80">(<span id="count-done">0</span>)</span></span>
+                    </button>
+                    <button class="tab-btn flex flex-col items-center justify-center py-2.5 border-b-2 border-transparent" data-status="canceled">
+                        <span class="font-bold text-[12px] text-gray-400 transition-colors" id="tab-text-canceled">Canceled <span class="text-[10px] opacity-80">(<span id="count-canceled">0</span>)</span></span>
+                    </button>
+                </nav>
+            </header>
+            <div class="flex-1 overflow-y-auto px-4 py-4" id="crm-requests-container"></div>
+        </div>
+
+        <div class="bottom-sheet" id="sheet-request-details" style="z-index: 80;">
+            <header class="bg-surface rounded-t-[32px] border-b border-border-base sticky top-0 z-20 flex-shrink-0">
+                <div class="w-12 h-1.5 bg-gray-300 rounded-full mx-auto mt-3 mb-2"></div>
+                <div class="flex justify-between items-center px-4 pb-3">
+                    <button class="p-2 hover:bg-gray-100 rounded-full flex items-center justify-center" id="close-request-details-btn"><span class="material-symbols-outlined">arrow_back</span></button>
+                    <h2 class="font-bold text-[18px] text-text-main" id="detail-order-id">Order #0</h2>
+                    <div class="relative">
+                        <select id="detail-status-select" class="appearance-none text-white font-bold text-[12px] pl-3 pr-8 py-1.5 rounded-full border-none outline-none cursor-pointer transition-colors bg-blue-500">
+                            <option value="new">New</option>
+                            <option value="progress">In progress</option>
+                            <option value="done">Done</option>
+                            <option value="canceled">Canceled</option>
+                        </select>
+                        <span class="material-symbols-outlined absolute right-2 top-1/2 -translate-y-1/2 text-white pointer-events-none text-[16px]">expand_more</span>
+                    </div>
+                </div>
+            </header>
+
+            <div class="flex-1 overflow-y-auto px-4 py-4 space-y-6">
+                <div class="space-y-1">
+                    <span class="text-[11px] font-bold text-text-muted uppercase">Submission Date</span>
+                    <div class="flex items-center gap-2 bg-white p-2.5 rounded-xl border border-gray-200 shadow-sm">
+                        <span class="material-symbols-outlined text-gray-500 text-[18px]">calendar_today</span>
+                        <span class="text-[13px] font-semibold" id="detail-date">Jun 18, 2026</span>
+                    </div>
+                </div>
+
+                <div id="detail-dynamic-fields" class="space-y-4"></div>
+
+                <div class="space-y-1 pt-2">
+                    <span class="text-[11px] font-bold text-text-muted uppercase">Tags</span>
+                    <div class="flex flex-wrap gap-2 items-center" id="detail-tags-container">
+                        <div class="flex items-center gap-2 bg-white border border-gray-200 p-1 rounded-full pl-3 flex-1 min-w-[140px] shadow-sm">
+                            <input type="text" id="detail-new-tag" placeholder="Add tag..." class="border-none outline-none bg-transparent text-[13px] font-semibold w-full p-0 focus:ring-0">
+                            <button id="btn-add-tag" class="w-6 h-6 shrink-0 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center hover:bg-blue-200"><span class="material-symbols-outlined text-[16px]">add</span></button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="space-y-1">
+                    <span class="text-[11px] font-bold text-text-muted uppercase">Notes (Private)</span>
+                    <textarea id="detail-notes" class="w-full bg-white border border-gray-200 rounded-xl p-3 text-[14px] font-medium text-text-main focus:border-primary outline-none transition-colors resize-none shadow-sm" rows="4" placeholder="Write internal notes about this request..."></textarea>
+                </div>
+                <div class="h-10"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let requestsDB = []; // البيانات ستأتي من قاعدة البيانات الحقيقية
+        let currentTab = 'new';
+        let currentEditingId = null;
+
+        const overlay = document.getElementById('sheet-overlay');
+        const sheetList = document.getElementById('sheet-requests-list');
+        const sheetDetails = document.getElementById('sheet-request-details');
+        const listContainer = document.getElementById('crm-requests-container');
+        const dynamicFieldsContainer = document.getElementById('detail-dynamic-fields');
+        const toast = document.getElementById('crm-toast');
+        const toastMsg = document.getElementById('crm-toast-msg');
+
+        // جلب الطلبات من الباك اند (السيرفر)
+        async function loadRequests() {
+            try {
+                const res = await fetch('../backend/api/get_requests.php');
+                const data = await res.json();
+                if (data.status === 'success') {
+                    requestsDB = data.data; 
+                    updateCounts();
+                    renderList();
+                }
+            } catch (e) { console.error('Error loading requests:', e); }
+        }
+
+        // حفظ التغييرات للباك اند (السيرفر)
+        async function saveRequestData(req) {
+            try {
+                await fetch('../backend/api/update_request.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        id: req.id,
+                        status: req.status,
+                        tags: req.tags,
+                        notes: req.notes
+                    })
+                });
+            } catch (e) { console.error('Error saving request:', e); }
+        }
+
+        // 1. التحقق من تسجيل الدخول
+        document.addEventListener('DOMContentLoaded', async () => {
+            try {
+                const response = await fetch('../backend/api/check_auth.php');
+                const data = await response.json();
+                if (data.logged_in === true) {
+                    const userSlug = data.slug;
+                    const linkDisplay = document.getElementById('display-slug');
+                    if (linkDisplay && userSlug) {
+                        linkDisplay.textContent = `linknest.com/${userSlug}`;
+                    }
+                    loadRequests(); // استدعاء الطلبات الحقيقية
+                } else {
+                    window.location.href = 'auth.html';
+                }
+            } catch (err) { window.location.href = 'auth.html'; }
+        });
+
+        // 2. تسجيل الخروج
+        document.getElementById('btn-logout').addEventListener('click', async () => {
+            try {
+                await fetch('../backend/api/logout.php', { method: 'POST' });
+                window.location.href = 'auth.html';
+            } catch (e) { console.error("Logout failed", e); }
+        });
+
+        function openSheet(sheet) { overlay.classList.add('active'); sheet.classList.add('active'); }
+        function closeSheet(sheet) { sheet.classList.remove('active'); if(!sheetList.classList.contains('active') && !sheetDetails.classList.contains('active')) overlay.classList.remove('active'); }
+        
+        document.getElementById('btn-open-requests').addEventListener('click', () => { updateCounts(); renderList(); openSheet(sheetList); });
+        document.getElementById('close-requests-list-btn').addEventListener('click', () => closeSheet(sheetList));
+        document.getElementById('close-request-details-btn').addEventListener('click', () => closeSheet(sheetDetails));
+        overlay.addEventListener('click', () => { closeSheet(sheetDetails); closeSheet(sheetList); });
+
+        window.copyToClipboard = function(text) {
+            navigator.clipboard.writeText(text).then(() => {
+                toastMsg.textContent = "Copied successfully!";
+                toast.classList.add('show');
+                setTimeout(() => toast.classList.remove('show'), 2500);
+            });
+        };
+
+        function updateCounts() {
+            const counts = { new: 0, progress: 0, done: 0, canceled: 0 };
+            requestsDB.forEach(req => { if(counts[req.status] !== undefined) counts[req.status]++; });
+            
+            document.getElementById('count-new').textContent = counts.new;
+            document.getElementById('count-progress').textContent = counts.progress;
+            document.getElementById('count-done').textContent = counts.done;
+            document.getElementById('count-canceled').textContent = counts.canceled;
+            
+            document.getElementById('main-requests-badge').textContent = `${counts.new} NEW`;
+            if(counts.new === 0) document.getElementById('main-requests-badge').style.display = 'none';
+            else document.getElementById('main-requests-badge').style.display = 'block';
+        }
+
+        function renderList() {
+            listContainer.innerHTML = '';
+            const filtered = requestsDB.filter(req => req.status === currentTab);
+            if(filtered.length === 0) { listContainer.innerHTML = `<div class="text-center text-gray-400 mt-10 text-[14px]">No requests found.</div>`; return; }
+
+            filtered.forEach(req => {
+                let badgeClass = ''; let badgeText = '';
+                if(req.status === 'new') { badgeClass = 'status-new'; badgeText = 'New'; }
+                else if(req.status === 'progress') { badgeClass = 'status-progress'; badgeText = 'In progress'; }
+                else if(req.status === 'done') { badgeClass = 'status-done'; badgeText = 'Done'; }
+                else { badgeClass = 'status-canceled'; badgeText = 'Canceled'; }
+
+                let primaryIdentifier = req.formData["Name"] || req.formData["Username"] || req.formData["Email"] || req.formData["Phone"] || "New Submission";
+                let tagsHTML = req.tags.map(t => `<span class="bg-gray-100 text-gray-600 border border-gray-200 px-2 py-0.5 rounded-full text-[10px] font-bold mr-1 inline-block mt-1">${t}</span>`).join('');
+                let notesHTML = req.notes ? `<p class="text-[11px] text-gray-500 mt-1 truncate">📝 ${req.notes}</p>` : '';
+                let extraData = (tagsHTML || notesHTML) ? `<div class="mt-2 pt-2 border-t border-gray-100">${tagsHTML} ${notesHTML}</div>` : '';
+
+                const card = document.createElement('div');
+                card.className = "bg-white border border-gray-200 rounded-2xl p-4 mb-3 shadow-sm hover:border-blue-300 transition-colors cursor-pointer";
+                card.onclick = () => openDetails(req.id);
+                card.innerHTML = `
+                    <div class="flex justify-between items-start">
+                        <div class="overflow-hidden pr-2">
+                            <div class="flex items-center gap-2">
+                                <span class="text-[12px] font-bold text-gray-400 shrink-0">#${req.id}</span>
+                                <span class="text-[14px] font-bold text-gray-900 truncate">${primaryIdentifier}</span>
+                            </div>
+                        </div>
+                        <div class="text-right flex flex-col items-end gap-1 shrink-0">
+                            <span class="text-[10px] font-bold ${badgeClass} px-2 py-0.5 rounded-full shadow-sm">${badgeText}</span>
+                            <span class="text-[10px] font-medium text-gray-400">${req.dateStr}</span>
+                        </div>
+                    </div>
+                    ${extraData}
+                `;
+                listContainer.appendChild(card);
+            });
+        }
+
+        function setTabActiveColor(status) {
+            const tabs = document.querySelectorAll('.tab-btn');
+            tabs.forEach(btn => {
+                btn.style.borderColor = 'transparent';
+                btn.querySelector('span').className = 'font-bold text-[12px] text-gray-400 transition-colors';
+            });
+            const activeTab = document.querySelector(`.tab-btn[data-status="${status}"]`);
+            let color = '';
+            if(status === 'new') color = '#3b82f6';
+            else if(status === 'progress') color = '#f59e0b';
+            else if(status === 'done') color = '#10b981';
+            else color = '#6b7280';
+            
+            activeTab.style.borderColor = color;
+            activeTab.querySelector('span').className = `font-bold text-[12px] transition-colors`;
+            activeTab.querySelector('span').style.color = color;
+        }
+
+        document.querySelectorAll('.tab-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                currentTab = e.currentTarget.dataset.status;
+                setTabActiveColor(currentTab);
+                renderList();
+            });
+        });
+
+        function openDetails(id) {
+            currentEditingId = id;
+            const req = requestsDB.find(r => r.id === id);
+            
+            document.getElementById('detail-order-id').textContent = `Order #${req.id}`;
+            document.getElementById('detail-date').textContent = req.fullDate;
+            document.getElementById('detail-notes').value = req.notes;
+            document.getElementById('detail-new-tag').value = '';
+            
+            const select = document.getElementById('detail-status-select');
+            select.value = req.status;
+            updateSelectColor(select);
+            renderTags(req.tags);
+
+            dynamicFieldsContainer.innerHTML = '';
+            for (const [key, value] of Object.entries(req.formData)) {
+                let lowerKey = key.toLowerCase();
+                let actionsHTML = '';
+
+                if (lowerKey.includes('email') || lowerKey.includes('بريد')) {
+                    actionsHTML = `
+                        <div class="flex gap-1 shrink-0">
+                            <button onclick="copyToClipboard('${value}')" class="p-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors flex items-center justify-center"><span class="material-symbols-outlined text-[20px]">content_copy</span></button>
+                            <a href="mailto:${value}" class="p-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors flex items-center justify-center"><span class="material-symbols-outlined text-[20px]">mail</span></a>
+                        </div>`;
+                } else if (lowerKey.includes('phone') || lowerKey.includes('رقم') || lowerKey.includes('جوال') || lowerKey.includes('هاتف')) {
+                    actionsHTML = `
+                        <div class="flex gap-1 shrink-0">
+                            <button onclick="copyToClipboard('${value}')" class="p-2 bg-green-50 text-green-600 rounded-lg hover:bg-green-100 transition-colors flex items-center justify-center"><span class="material-symbols-outlined text-[20px]">content_copy</span></button>
+                            <a href="tel:${value}" class="p-2 bg-green-50 text-green-600 rounded-lg hover:bg-green-100 transition-colors flex items-center justify-center"><span class="material-symbols-outlined text-[20px]">call</span></a>
+                        </div>`;
+                } else {
+                    actionsHTML = `
+                        <button onclick="copyToClipboard('${value}')" class="p-2 bg-gray-50 text-gray-600 rounded-lg hover:bg-gray-100 transition-colors flex items-center justify-center shrink-0"><span class="material-symbols-outlined text-[20px]">content_copy</span></button>`;
+                }
+
+                dynamicFieldsContainer.innerHTML += `
+                    <div class="space-y-1">
+                        <span class="text-[11px] font-bold text-text-muted uppercase">${key}</span>
+                        <div class="flex items-center justify-between bg-white border border-gray-200 p-3 rounded-xl overflow-hidden gap-3 shadow-sm">
+                            <span class="text-[14px] font-semibold text-text-main truncate">${value}</span>
+                            ${actionsHTML}
+                        </div>
+                    </div>`;
+            }
+            openSheet(sheetDetails);
+        }
+
+        function renderTags(tags) {
+            const container = document.getElementById('detail-tags-container');
+            const tagsToRemove = container.querySelectorAll('.existing-tag');
+            tagsToRemove.forEach(t => t.remove());
+
+            tags.forEach((tag, index) => {
+                const tagEl = document.createElement('div');
+                tagEl.className = "existing-tag flex items-center gap-1 bg-blue-50 text-blue-600 border border-blue-200 px-3 py-1 rounded-full text-[12px] font-bold";
+                tagEl.innerHTML = `<span>${tag}</span> <span class="material-symbols-outlined text-[14px] cursor-pointer hover:text-red-500 transition-colors" onclick="removeTag(${index})">close</span>`;
+                container.insertBefore(tagEl, container.lastElementChild);
+            });
+        }
+
+        document.getElementById('btn-add-tag').addEventListener('click', () => {
+            const input = document.getElementById('detail-new-tag');
+            const val = input.value.trim();
+            if(val && currentEditingId) {
+                let formatted = val.startsWith('#') ? val : '#' + val;
+                const req = requestsDB.find(r => r.id === currentEditingId);
+                req.tags.push(formatted);
+                input.value = '';
+                renderTags(req.tags);
+                renderList();
+                saveRequestData(req); // تحديث في قاعدة البيانات
+            }
+        });
+
+        document.getElementById('detail-new-tag').addEventListener('keypress', function (e) {
+            if (e.key === 'Enter') { e.preventDefault(); document.getElementById('btn-add-tag').click(); }
+        });
+
+        window.removeTag = function(index) {
+            if(currentEditingId) {
+                const req = requestsDB.find(r => r.id === currentEditingId);
+                req.tags.splice(index, 1);
+                renderTags(req.tags);
+                renderList();
+                saveRequestData(req); // تحديث في قاعدة البيانات
+            }
+        };
+
+        // نستخدم حدث change للملاحظات حتى يحفظ فقط عندما يخرج المستخدم من المربع لتقليل الضغط على السيرفر
+        document.getElementById('detail-notes').addEventListener('change', (e) => {
+            if(currentEditingId) {
+                const req = requestsDB.find(r => r.id === currentEditingId);
+                req.notes = e.target.value;
+                renderList();
+                saveRequestData(req); // تحديث في قاعدة البيانات
+            }
+        });
+
+        const statusSelect = document.getElementById('detail-status-select');
+        function updateSelectColor(selectEl) {
+            selectEl.classList.remove('bg-blue-500', 'bg-yellow-500', 'bg-green-500', 'bg-gray-500');
+            if(selectEl.value === 'new') selectEl.classList.add('bg-blue-500');
+            else if(selectEl.value === 'progress') selectEl.classList.add('bg-yellow-500');
+            else if(selectEl.value === 'done') selectEl.classList.add('bg-green-500');
+            else selectEl.classList.add('bg-gray-500');
+        }
+
+        statusSelect.addEventListener('change', (e) => {
+            updateSelectColor(e.target);
+            if(currentEditingId) {
+                const req = requestsDB.find(r => r.id === currentEditingId);
+                req.status = e.target.value;
+                updateCounts();
+                renderList();
+                saveRequestData(req); // تحديث في قاعدة البيانات
+            }
+        });
+    </script>
+</body>
+</html>
