@@ -726,8 +726,8 @@
                                 <td class="px-6 py-4 text-sm">${date}</td>
                                 <td class="px-6 py-4">
                                     <div class="flex items-center gap-2">
-                                        <button class="p-1.5 hover:bg-tertiary-container/10 rounded-lg text-tertiary transition-colors" title="ترقية للبرو"><span class="material-symbols-outlined text-lg">diamond</span></button>
-                                        <button class="p-1.5 hover:bg-danger/10 rounded-lg text-danger transition-colors" title="حذف/إيقاف"><span class="material-symbols-outlined text-lg">block</span></button>
+                                        <button onclick="editUser(${user.id}, ${user.plan_id})" class="p-1.5 hover:bg-tertiary-container/10 rounded-lg text-tertiary transition-colors" title="تعديل الخطة"><span class="material-symbols-outlined text-lg">edit</span></button>
+                                        <button onclick="impersonateUser(${user.id})" class="p-1.5 hover:bg-danger/10 rounded-lg text-danger transition-colors" title="الدخول كالمستخدم"><span class="material-symbols-outlined text-lg">login</span></button>
                                     </div>
                                 </td>
                             </tr>
@@ -781,5 +781,42 @@
     function exportToCSV() {
         alert('يتم الآن تحضير ملف CSV/Excel لبيانات الطلبات... سيتم البدء برمجته في الخطوة القادمة!');
     }
+
+    window.impersonateUser = function(userId) {
+        if (!confirm('هل أنت متأكد أنك تريد الدخول كـ هذا المستخدم؟')) return;
+        fetch('../backend/api/admin_impersonate.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ target_user_id: userId })
+        })
+        .then(r => r.json())
+        .then(d => {
+            if (d.status === 'success') {
+                window.location.href = '../frontend/manage.html';
+            } else {
+                alert(d.error || 'خطأ في العملية');
+            }
+        });
+    };
+
+    window.editUser = function(userId, currentPlan) {
+        let newPlan = prompt('أدخل رقم الخطة الجديدة (1 = Free, 2 = Pro):', currentPlan);
+        if (newPlan && (newPlan === '1' || newPlan === '2')) {
+            fetch('../backend/api/admin_edit_user.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ user_id: userId, plan_id: newPlan })
+            })
+            .then(r => r.json())
+            .then(d => {
+                if (d.status === 'success') {
+                    alert('تم تحديث المستخدم بنجاح');
+                    location.reload();
+                } else {
+                    alert(d.error || 'خطأ في التحديث');
+                }
+            });
+        }
+    };
 </script>
 </body></html>

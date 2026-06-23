@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pricing - LinkNest</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f3f4f6; color: #111827; margin: 0; padding: 2rem; display: flex; flex-direction: column; align-items: center; }
+        .pricing-container { display: flex; gap: 2rem; max-width: 900px; width: 100%; justify-content: center; flex-wrap: wrap; margin-top: 2rem; }
+        .plan-card { background: #fff; padding: 2rem; border-radius: 16px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); flex: 1; min-width: 300px; text-align: center; display: flex; flex-direction: column; }
+        .plan-name { font-size: 24px; font-weight: bold; margin-bottom: 1rem; color: #3b82f6; }
+        .plan-price { font-size: 48px; font-weight: bold; margin-bottom: 1.5rem; }
+        .plan-price span { font-size: 16px; font-weight: normal; color: #6b7280; }
+        .plan-features { list-style: none; padding: 0; margin: 0 0 2rem 0; text-align: right; flex: 1; }
+        .plan-features li { margin-bottom: 0.75rem; display: flex; align-items: center; gap: 8px; }
+        .plan-features li::before { content: '✓'; color: #10b981; font-weight: bold; }
+        .btn { padding: 12px 24px; border-radius: 8px; border: none; font-size: 16px; font-weight: bold; cursor: pointer; transition: background 0.2s; width: 100%; }
+        .btn-primary { background: #3b82f6; color: #fff; }
+        .btn-primary:hover { background: #2563eb; }
+        .btn-outline { background: transparent; border: 2px solid #3b82f6; color: #3b82f6; }
+        .btn-outline:hover { background: #eff6ff; }
+        .message { margin-top: 1rem; font-weight: bold; }
+        .success { color: #10b981; }
+        .error { color: #ef4444; }
+    </style>
+</head>
+<body>
+    <h1>اختر الخطة المناسبة لك</h1>
+    <p style="color: #6b7280; margin-top: 0;">قم بترقية حسابك للحصول على ميزات إضافية وتجربة أفضل</p>
+
+    <div class="pricing-container">
+        <!-- Free Plan -->
+        <div class="plan-card">
+            <div class="plan-name">Free (الأساسية)</div>
+            <div class="plan-price">$0 <span>/ شهر</span></div>
+            <ul class="plan-features">
+                <li>بناء صفحة واحدة</li>
+                <li>عدد بلوكات محدود (10 بلوكات)</li>
+                <li>قوالب أساسية</li>
+            </ul>
+            <button class="btn btn-outline" disabled>الخطة الحالية</button>
+        </div>
+
+        <!-- Pro Plan -->
+        <div class="plan-card" style="border: 2px solid #3b82f6; transform: scale(1.05);">
+            <div class="plan-name">Pro (الاحترافية)</div>
+            <div class="plan-price">$9.99 <span>/ شهر</span></div>
+            <ul class="plan-features">
+                <li>بناء صفحات غير محدودة</li>
+                <li>عدد بلوكات غير محدود</li>
+                <li>قوالب مدفوعة ومخصصة (Pro Themes)</li>
+                <li>إزالة حقوق الموقع</li>
+                <li>إحصائيات متقدمة</li>
+            </ul>
+            <button class="btn btn-primary" id="btn-upgrade-pro">ترقية إلى Pro</button>
+        </div>
+    </div>
+
+    <div id="message" class="message"></div>
+
+    <script>
+        document.getElementById('btn-upgrade-pro').addEventListener('click', async () => {
+            const btn = document.getElementById('btn-upgrade-pro');
+            const msgEl = document.getElementById('message');
+
+            btn.disabled = true;
+            btn.textContent = 'جاري المعالجة...';
+            msgEl.textContent = '';
+
+            try {
+                // يفترض أن الترقية لخطة Pro التي معرفها 2
+                const response = await fetch('../backend/api/upgrade_plan.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ plan_id: 2, amount: 9.99 })
+                });
+
+                const data = await response.json();
+
+                if (data.status === 'success') {
+                    msgEl.className = 'message success';
+                    msgEl.textContent = 'تم ترقية حسابك بنجاح!';
+                    btn.textContent = 'أنت الآن مشترك';
+                } else {
+                    msgEl.className = 'message error';
+                    msgEl.textContent = data.error || 'حدث خطأ أثناء الترقية.';
+                    btn.disabled = false;
+                    btn.textContent = 'ترقية إلى Pro';
+                }
+            } catch (error) {
+                msgEl.className = 'message error';
+                msgEl.textContent = 'خطأ في الاتصال بالخادم.';
+                btn.disabled = false;
+                btn.textContent = 'ترقية إلى Pro';
+            }
+        });
+    </script>
+</body>
+</html>
