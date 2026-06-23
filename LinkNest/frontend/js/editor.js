@@ -91,7 +91,226 @@ document.addEventListener('DOMContentLoaded', async () => {
     const tabGifs = document.getElementById('tab-gifs');
     const tabStickers = document.getElementById('tab-stickers');
 
-    function buildGiphyBlockHTML(data) {
+
+    function buildFaqBlockHTML(items, styles) {
+        if (!items || items.length === 0) return `<div style="padding:15px; color:var(--page-text); opacity:0.5; font-weight:bold; font-size:14px; text-align:center;">+ Add FAQ Items</div>`;
+        let html = '<div class="linknest-faq-wrapper" style="width:100%; display:flex; flex-direction:column; gap:8px;">';
+        items.forEach((item, index) => {
+            html += `
+            <details class="linknest-faq-item">
+                <summary style="padding:12px 16px; cursor:pointer; font-weight:bold; display:flex; justify-content:space-between; align-items:center;">
+                    <span style="${styles.qStyle === 'bold' ? 'font-weight:bold;' : 'font-weight:normal;'}">${item.q}</span>
+                    <span class="faq-icon">+</span>
+                </summary>
+                <div style="padding:0 16px 12px; ${styles.aStyle === 'italic' ? 'font-style:italic;' : ''}">${item.a}</div>
+            </details>`;
+        });
+        html += '</div>';
+        return html;
+    }
+
+    function buildVideoBlockHTML(links, styles) {
+        if (!links || links.length === 0 || !links[0].url) return `<div style="padding:15px; color:var(--page-text); opacity:0.5; font-weight:bold; font-size:14px; text-align:center;">+ Add Video URL</div>`;
+        let html = '<div style="width:100%; display:flex; flex-direction:column; gap:12px;">';
+        links.forEach(link => {
+            if (!link.url) return;
+            // Simple iframe embed for youtube/vimeo placeholder
+            let embedUrl = link.url;
+            if (link.url.includes('youtube.com/watch?v=')) {
+                embedUrl = link.url.replace('watch?v=', 'embed/');
+            }
+            html += `<iframe src="${embedUrl}" ${styles.fullWidth ? 'width="100%"' : 'width="80%" style="margin: 0 auto; display: block;"'} height="200" frameborder="0" allowfullscreen style="border-radius:12px;"></iframe>`;
+        });
+        html += '</div>';
+        return html;
+    }
+
+    function buildSocialBlockHTML(links, styles, isPreview) {
+        if (!links || links.length === 0) return `<div style="padding:15px; color:var(--page-text); opacity:0.5; font-weight:bold; font-size:14px; text-align:center;">+ Add Social Links</div>`;
+        let size = styles.size === 'small' ? '24px' : (styles.size === 'large' ? '48px' : '32px');
+        let align = styles.align || 'center';
+        let html = `<div style="width:100%; display:flex; justify-content:${align}; gap:12px; flex-wrap:wrap;">`;
+        links.forEach(link => {
+            let iconStr = link.url.includes('instagram') ? 'IG' : (link.url.includes('twitter') ? 'TW' : '🔗');
+            html += `<a href="${link.url}" target="_blank" style="width:${size}; height:${size}; background:${styles.color || 'var(--page-text)'}; color:var(--page-bg); display:flex; align-items:center; justify-content:center; border-radius:50%; text-decoration:none; font-weight:bold; font-size:12px;">${iconStr}</a>`;
+        });
+        html += '</div>';
+        return html;
+    }
+
+    function buildProfileBlockHTML(data) {
+        let align = data.align || 'center';
+        let borderRadius = data.shape === 'square' ? '8px' : '50%';
+        let html = `<div class="profile-block" style="text-align:${align};">`;
+        if (data.cover) {
+            html += `<div style="width:100%; height:120px; background-image:url('${data.cover}'); background-size:cover; background-position:center; border-radius:12px 12px 0 0;"></div>`;
+        }
+        if (data.avatar) {
+            html += `<img src="${data.avatar}" style="width:96px; height:96px; border-radius:${borderRadius}; margin: ${data.cover ? '-48px' : '0'} auto 12px; border: 4px solid var(--page-bg); object-fit:cover; display:inline-block;">`;
+        } else {
+            html += `<div style="width:96px; height:96px; border-radius:${borderRadius}; margin: ${data.cover ? '-48px' : '0'} auto 12px; border: 4px solid var(--page-bg); background:#e5e7eb; display:flex; align-items:center; justify-content:center; color:#9ca3af; font-size:12px; font-weight:bold;">Avatar</div>`;
+        }
+        if (data.title) html += `<h2 style="margin:0 0 4px; font-size:20px; font-weight:bold; color:var(--page-text);">${data.title}</h2>`;
+        if (data.subtitle) html += `<p style="margin:0; font-size:15px; color:var(--page-text); opacity:0.8;">${data.subtitle}</p>`;
+
+        if(!data.avatar && !data.cover && !data.title && !data.subtitle) {
+            return `<div style="padding:15px; color:var(--page-text); opacity:0.5; font-weight:bold; font-size:14px; text-align:center;">+ Setup Profile</div>`;
+        }
+
+        html += `</div>`;
+        return html;
+    }
+
+
+    // 🌟 New Blocks Builders
+    function buildCountdownBlockHTML(data) {
+        if (!data || !data.targetDate) return `<div style="padding:15px; color:var(--page-text); opacity:0.5; font-weight:bold; font-size:14px; text-align:center;">+ Setup Countdown Timer</div>`;
+        let align = data.align || 'center';
+        return `<div style="text-align:${align}; width:100%; padding:15px; background:var(--page-block-bg); border-radius:12px;">
+            ${data.title ? `<h3 style="margin:0 0 10px; color:var(--page-text); font-size:18px;">${data.title}</h3>` : ''}
+            <div style="font-size:24px; font-weight:bold; color:var(--page-text); font-family:monospace;">
+                00 : 00 : 00 : 00
+            </div>
+            <div style="font-size:12px; color:var(--page-text); opacity:0.7; display:flex; justify-content:center; gap:20px; margin-top:5px;">
+                <span>Days</span><span>Hrs</span><span>Mins</span><span>Secs</span>
+            </div>
+        </div>`;
+    }
+
+    function buildMapBlockHTML(data) {
+        if (!data || !data.address) return `<div style="padding:15px; color:var(--page-text); opacity:0.5; font-weight:bold; font-size:14px; text-align:center;">+ Setup Google Maps Address</div>`;
+        let encodedAddress = encodeURIComponent(data.address);
+        return `<div style="width:100%; border-radius:12px; overflow:hidden;">
+            <iframe width="100%" height="250" frameborder="0" style="border:0"
+                src="https://www.google.com/maps?q=${encodedAddress}&output=embed" allowfullscreen>
+            </iframe>
+        </div>`;
+    }
+
+    function buildCarouselBlockHTML(data) {
+        if (!data || !data.images || data.images.length === 0) return `<div style="padding:15px; color:var(--page-text); opacity:0.5; font-weight:bold; font-size:14px; text-align:center;">+ Add Carousel Images</div>`;
+        let html = `<div style="width:100%; display:flex; overflow-x:auto; gap:10px; scroll-snap-type: x mandatory; padding-bottom:10px;">`;
+        data.images.forEach(img => {
+            html += `<img src="${img}" style="height:200px; min-width:80%; object-fit:cover; border-radius:12px; scroll-snap-align: center;">`;
+        });
+        html += `</div>`;
+        return html;
+    }
+
+    function buildAudioBlockHTML(data) {
+        if (!data || !data.url) return `<div style="padding:15px; color:var(--page-text); opacity:0.5; font-weight:bold; font-size:14px; text-align:center;">+ Add Spotify/Soundcloud Link</div>`;
+        // Simple heuristic for Spotify embed
+        let embedUrl = data.url;
+        let height = "152";
+        if (data.url.includes('spotify.com')) {
+            embedUrl = data.url.replace('open.spotify.com/', 'open.spotify.com/embed/');
+        } else if (data.url.includes('soundcloud.com')) {
+            embedUrl = `https://w.soundcloud.com/player/?url=${encodeURIComponent(data.url)}&color=%23ff5500&auto_play=false&hide_related=false&show_comments=true&show_user=true&show_reposts=false&show_teaser=true&visual=true`;
+        }
+        return `<div style="width:100%; border-radius:12px; overflow:hidden;">
+            <iframe style="border-radius:12px" src="${embedUrl}" width="100%" height="${height}" frameBorder="0" allowfullscreen="" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy"></iframe>
+        </div>`;
+    }
+
+
+    function buildDividerBlockHTML(data) {
+        let type = (data && data.type) ? data.type : 'solid';
+        let color = (data && data.color) ? data.color : 'var(--page-text)';
+        let thickness = (data && data.thickness) ? data.thickness : '1px';
+        let spacing = (data && data.spacing) ? data.spacing : '20px';
+
+        if (type === 'spacer') {
+            return `<div style="width:100%; height:${spacing};"></div>`;
+        }
+        return `<div style="width:100%; padding:${spacing} 0;">
+            <hr style="border:none; border-top:${thickness} ${type} ${color}; opacity:0.3; margin:0;">
+        </div>`;
+    }
+
+    function buildTestimonialsBlockHTML(data) {
+        if (!data || !data.items || data.items.length === 0) return `<div style="padding:15px; color:var(--page-text); opacity:0.5; font-weight:bold; font-size:14px; text-align:center;">+ Add Testimonial</div>`;
+        let html = `<div style="width:100%; display:flex; flex-direction:column; gap:16px;">`;
+        data.items.forEach(item => {
+            html += `<div style="padding:20px; background:var(--page-block-bg, rgba(128,128,128,0.05)); border-radius:12px; position:relative;">
+                <div style="font-size:24px; color:var(--page-text); opacity:0.2; position:absolute; top:10px; left:15px;">"</div>
+                <p style="font-size:15px; color:var(--page-text); font-style:italic; margin:0 0 15px 0; padding-left:15px; position:relative; z-index:1;">${item.text}</p>
+                <div style="display:flex; align-items:center; gap:12px;">
+                    ${item.avatar ? `<img src="${item.avatar}" style="width:40px; height:40px; border-radius:50%; object-fit:cover;">` : `<div style="width:40px; height:40px; border-radius:50%; background:#e5e7eb;"></div>`}
+                    <div>
+                        <div style="font-weight:bold; color:var(--page-text); font-size:14px;">${item.name}</div>
+                        ${item.role ? `<div style="font-size:12px; color:var(--page-text); opacity:0.7;">${item.role}</div>` : ''}
+                    </div>
+                </div>
+            </div>`;
+        });
+        html += `</div>`;
+        return html;
+    }
+
+    function buildQuoteBlockHTML(data) {
+        if (!data || !data.text) return `<div style="padding:15px; color:var(--page-text); opacity:0.5; font-weight:bold; font-size:14px; text-align:center;">+ Add Quote</div>`;
+        return `<div style="width:100%; padding:24px; border-left: 4px solid var(--page-text); background:var(--page-block-bg, rgba(128,128,128,0.05)); border-radius:0 12px 12px 0;">
+            <p style="font-size:18px; color:var(--page-text); font-style:italic; margin:0 0 10px 0; font-weight:500;">"${data.text}"</p>
+            ${data.author ? `<div style="font-size:14px; color:var(--page-text); opacity:0.8; font-weight:bold;">— ${data.author}</div>` : ''}
+        </div>`;
+    }
+
+    function buildGalleryBlockHTML(data) {
+        if (!data || !data.images || data.images.length === 0) return `<div style="padding:15px; color:var(--page-text); opacity:0.5; font-weight:bold; font-size:14px; text-align:center;">+ Add Gallery Images</div>`;
+        let columns = data.columns || 2;
+        let html = `<div style="width:100%; display:grid; grid-template-columns: repeat(${columns}, 1fr); gap:8px;">`;
+        data.images.forEach(img => {
+            html += `<img src="${img}" style="width:100%; aspect-ratio:1/1; object-fit:cover; border-radius:8px;">`;
+        });
+        html += `</div>`;
+        return html;
+    }
+
+
+    function buildPricingBlockHTML(data) {
+        if (!data || !data.items || data.items.length === 0) return `<div style="padding:15px; color:var(--page-text); opacity:0.5; font-weight:bold; font-size:14px; text-align:center;">+ Add Pricing Items</div>`;
+        let html = `<div style="width:100%; display:flex; flex-direction:column; gap:12px;">`;
+        data.items.forEach(item => {
+            html += `<div style="padding:16px; background:var(--page-block-bg, rgba(128,128,128,0.05)); border-radius:12px; display:flex; justify-content:space-between; align-items:center;">
+                <div>
+                    <div style="font-weight:bold; font-size:16px; color:var(--page-text);">${item.name}</div>
+                    ${item.desc ? `<div style="font-size:13px; color:var(--page-text); opacity:0.7; margin-top:4px;">${item.desc}</div>` : ''}
+                </div>
+                <div style="font-size:18px; font-weight:bold; color:var(--page-text);">${item.price}</div>
+            </div>`;
+        });
+        html += `</div>`;
+        return html;
+    }
+
+    function buildCtaBlockHTML(data) {
+        if (!data || !data.text) return `<div style="padding:15px; color:var(--page-text); opacity:0.5; font-weight:bold; font-size:14px; text-align:center;">+ Setup CTA Button</div>`;
+        let bg = data.bg || '#3b82f6';
+        let textCol = data.textCol || '#ffffff';
+        let isPill = data.style === 'pill';
+        return `<div style="width:100%; display:flex; justify-content:center;">
+            <a href="${data.url || '#'}" target="_blank" style="padding:14px 32px; background:${bg}; color:${textCol}; text-decoration:none; font-weight:bold; font-size:16px; border-radius:${isPill ? '50px' : '12px'}; display:inline-block; text-align:center; width:100%; max-width:300px; box-shadow:0 4px 6px -1px rgba(0,0,0,0.1); transition:transform 0.2s;">
+                ${data.text}
+            </a>
+        </div>`;
+    }
+
+    function buildCustomhtmlBlockHTML(data) {
+        if (!data || !data.html) return `<div style="padding:15px; color:var(--page-text); opacity:0.5; font-weight:bold; font-size:14px; text-align:center;">+ Add Custom HTML</div>`;
+        return `<div style="width:100%; border-radius:12px; overflow:hidden;">${data.html}</div>`;
+    }
+
+    function buildDownloadBlockHTML(data) {
+        if (!data || !data.url) return `<div style="padding:15px; color:var(--page-text); opacity:0.5; font-weight:bold; font-size:14px; text-align:center;">+ Add Download File</div>`;
+        return `<div style="width:100%; display:flex; justify-content:center;">
+            <a href="${data.url}" download target="_blank" style="padding:14px 20px; background:var(--page-block-bg, rgba(128,128,128,0.05)); color:var(--page-text); border:1px solid rgba(128,128,128,0.2); text-decoration:none; font-weight:bold; font-size:15px; border-radius:12px; display:flex; align-items:center; justify-content:center; gap:10px; width:100%;">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                ${data.text || 'Download File'}
+            </a>
+        </div>`;
+    }
+
+function buildGiphyBlockHTML(data) {
         if(!data.url) return `<div style="padding:15px; color:var(--page-text); opacity:0.5; font-weight:bold; font-size:14px; text-align:center;">+ Select a GIF</div>`;
         return `<div style="padding:${data.padding}; background:${data.bg}; border-radius:16px; width:100%; box-sizing:border-box; display:flex; justify-content:center; overflow:hidden;">
                     <img src="${data.url}" style="max-width:100%; height:auto; border-radius:12px; pointer-events:none;">
@@ -179,7 +398,120 @@ document.addEventListener('DOMContentLoaded', async () => {
     tabStickers?.addEventListener('click', () => switchGiphyTab('stickers'));
 
     // 🌟 فتح نافذة Giphy
-    document.getElementById('select-giphy-block')?.addEventListener('click', (e) => {
+
+    // 🌟 New Blocks Click Listeners
+    document.getElementById('select-countdown-block')?.addEventListener('click', (e) => {
+        e.stopPropagation(); resetEditorState();
+        let currentData = { title: 'Launch Date', targetDate: '2025-12-31T23:59', align: 'center' };
+        const innerContent = buildCountdownBlockHTML(currentData);
+        const div = document.createElement('div'); div.className = 'block-item selected'; div.dataset.type = 'countdown'; div.dataset.content = JSON.stringify(currentData); div.innerHTML = createBlockHTML(innerContent); previewArea.appendChild(div);
+        editingBlock = div; isNewBlock = true; hasUnsavedChanges = true; previewArea.scrollTop = previewArea.scrollHeight;
+        // In a real scenario we would open a specific sheet to edit this. For now we just add it.
+        hideAllSheets(); autoSaveProfile();
+    });
+
+    document.getElementById('select-map-block')?.addEventListener('click', (e) => {
+        e.stopPropagation(); resetEditorState();
+        let currentData = { address: 'Riyadh, Saudi Arabia' };
+        const innerContent = buildMapBlockHTML(currentData);
+        const div = document.createElement('div'); div.className = 'block-item selected'; div.dataset.type = 'map'; div.dataset.content = JSON.stringify(currentData); div.innerHTML = createBlockHTML(innerContent); previewArea.appendChild(div);
+        editingBlock = div; isNewBlock = true; hasUnsavedChanges = true; previewArea.scrollTop = previewArea.scrollHeight;
+        hideAllSheets(); autoSaveProfile();
+    });
+
+    document.getElementById('select-carousel-block')?.addEventListener('click', (e) => {
+        e.stopPropagation(); resetEditorState();
+        let currentData = { images: ['https://images.unsplash.com/photo-1518770660439-4636190af475?w=500', 'https://images.unsplash.com/photo-1535332371349-a5d229f49cb5?w=500'] };
+        const innerContent = buildCarouselBlockHTML(currentData);
+        const div = document.createElement('div'); div.className = 'block-item selected'; div.dataset.type = 'carousel'; div.dataset.content = JSON.stringify(currentData); div.innerHTML = createBlockHTML(innerContent); previewArea.appendChild(div);
+        editingBlock = div; isNewBlock = true; hasUnsavedChanges = true; previewArea.scrollTop = previewArea.scrollHeight;
+        hideAllSheets(); autoSaveProfile();
+    });
+
+    document.getElementById('select-audio-block')?.addEventListener('click', (e) => {
+        e.stopPropagation(); resetEditorState();
+        let currentData = { url: 'https://open.spotify.com/track/4cOdK2wGLETKBW3PvgPWqT' };
+        const innerContent = buildAudioBlockHTML(currentData);
+        const div = document.createElement('div'); div.className = 'block-item selected'; div.dataset.type = 'audio'; div.dataset.content = JSON.stringify(currentData); div.innerHTML = createBlockHTML(innerContent); previewArea.appendChild(div);
+        editingBlock = div; isNewBlock = true; hasUnsavedChanges = true; previewArea.scrollTop = previewArea.scrollHeight;
+        hideAllSheets(); autoSaveProfile();
+    });
+
+
+    document.getElementById('select-divider-block')?.addEventListener('click', (e) => {
+        e.stopPropagation(); resetEditorState();
+        let currentData = { type: 'solid', color: 'var(--page-text)', thickness: '1px', spacing: '20px' };
+        const innerContent = buildDividerBlockHTML(currentData);
+        const div = document.createElement('div'); div.className = 'block-item selected'; div.dataset.type = 'divider'; div.dataset.content = JSON.stringify(currentData); div.innerHTML = createBlockHTML(innerContent); previewArea.appendChild(div);
+        editingBlock = div; isNewBlock = true; hasUnsavedChanges = true; previewArea.scrollTop = previewArea.scrollHeight;
+        hideAllSheets(); autoSaveProfile();
+    });
+
+    document.getElementById('select-testimonials-block')?.addEventListener('click', (e) => {
+        e.stopPropagation(); resetEditorState();
+        let currentData = { items: [{text: 'This is amazing!', name: 'John Doe', role: 'CEO', avatar: ''}] };
+        const innerContent = buildTestimonialsBlockHTML(currentData);
+        const div = document.createElement('div'); div.className = 'block-item selected'; div.dataset.type = 'testimonials'; div.dataset.content = JSON.stringify(currentData); div.innerHTML = createBlockHTML(innerContent); previewArea.appendChild(div);
+        editingBlock = div; isNewBlock = true; hasUnsavedChanges = true; previewArea.scrollTop = previewArea.scrollHeight;
+        hideAllSheets(); autoSaveProfile();
+    });
+
+    document.getElementById('select-quote-block')?.addEventListener('click', (e) => {
+        e.stopPropagation(); resetEditorState();
+        let currentData = { text: 'The only way to do great work is to love what you do.', author: 'Steve Jobs' };
+        const innerContent = buildQuoteBlockHTML(currentData);
+        const div = document.createElement('div'); div.className = 'block-item selected'; div.dataset.type = 'quote'; div.dataset.content = JSON.stringify(currentData); div.innerHTML = createBlockHTML(innerContent); previewArea.appendChild(div);
+        editingBlock = div; isNewBlock = true; hasUnsavedChanges = true; previewArea.scrollTop = previewArea.scrollHeight;
+        hideAllSheets(); autoSaveProfile();
+    });
+
+    document.getElementById('select-gallery-block')?.addEventListener('click', (e) => {
+        e.stopPropagation(); resetEditorState();
+        let currentData = { images: ['https://images.unsplash.com/photo-1518770660439-4636190af475?w=200', 'https://images.unsplash.com/photo-1535332371349-a5d229f49cb5?w=200'], columns: 2 };
+        const innerContent = buildGalleryBlockHTML(currentData);
+        const div = document.createElement('div'); div.className = 'block-item selected'; div.dataset.type = 'gallery'; div.dataset.content = JSON.stringify(currentData); div.innerHTML = createBlockHTML(innerContent); previewArea.appendChild(div);
+        editingBlock = div; isNewBlock = true; hasUnsavedChanges = true; previewArea.scrollTop = previewArea.scrollHeight;
+        hideAllSheets(); autoSaveProfile();
+    });
+
+
+    document.getElementById('select-pricing-block')?.addEventListener('click', (e) => {
+        e.stopPropagation(); resetEditorState();
+        let currentData = { items: [{name: 'Basic Service', desc: '1 hour consultation', price: '$50'}, {name: 'Pro Package', desc: 'Full day support', price: '$300'}] };
+        const innerContent = buildPricingBlockHTML(currentData);
+        const div = document.createElement('div'); div.className = 'block-item selected'; div.dataset.type = 'pricing'; div.dataset.content = JSON.stringify(currentData); div.innerHTML = createBlockHTML(innerContent); previewArea.appendChild(div);
+        editingBlock = div; isNewBlock = true; hasUnsavedChanges = true; previewArea.scrollTop = previewArea.scrollHeight;
+        hideAllSheets(); autoSaveProfile();
+    });
+
+    document.getElementById('select-cta-block')?.addEventListener('click', (e) => {
+        e.stopPropagation(); resetEditorState();
+        let currentData = { text: 'Book Now', url: '#', bg: '#3b82f6', textCol: '#ffffff', style: 'rounded' };
+        const innerContent = buildCtaBlockHTML(currentData);
+        const div = document.createElement('div'); div.className = 'block-item selected'; div.dataset.type = 'cta'; div.dataset.content = JSON.stringify(currentData); div.innerHTML = createBlockHTML(innerContent); previewArea.appendChild(div);
+        editingBlock = div; isNewBlock = true; hasUnsavedChanges = true; previewArea.scrollTop = previewArea.scrollHeight;
+        hideAllSheets(); autoSaveProfile();
+    });
+
+    document.getElementById('select-customhtml-block')?.addEventListener('click', (e) => {
+        e.stopPropagation(); resetEditorState();
+        let currentData = { html: '<div style="padding:20px; text-align:center; border:2px dashed #ccc;">Your custom widget</div>' };
+        const innerContent = buildCustomhtmlBlockHTML(currentData);
+        const div = document.createElement('div'); div.className = 'block-item selected'; div.dataset.type = 'customhtml'; div.dataset.content = JSON.stringify(currentData); div.innerHTML = createBlockHTML(innerContent); previewArea.appendChild(div);
+        editingBlock = div; isNewBlock = true; hasUnsavedChanges = true; previewArea.scrollTop = previewArea.scrollHeight;
+        hideAllSheets(); autoSaveProfile();
+    });
+
+    document.getElementById('select-download-block')?.addEventListener('click', (e) => {
+        e.stopPropagation(); resetEditorState();
+        let currentData = { text: 'Download My Resume', url: '#' };
+        const innerContent = buildDownloadBlockHTML(currentData);
+        const div = document.createElement('div'); div.className = 'block-item selected'; div.dataset.type = 'download'; div.dataset.content = JSON.stringify(currentData); div.innerHTML = createBlockHTML(innerContent); previewArea.appendChild(div);
+        editingBlock = div; isNewBlock = true; hasUnsavedChanges = true; previewArea.scrollTop = previewArea.scrollHeight;
+        hideAllSheets(); autoSaveProfile();
+    });
+
+document.getElementById('select-giphy-block')?.addEventListener('click', (e) => {
         e.stopPropagation(); 
         resetEditorState();
         document.getElementById('save-giphy-btn').textContent = 'Add';

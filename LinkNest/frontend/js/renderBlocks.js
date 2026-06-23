@@ -104,7 +104,121 @@ document.addEventListener("DOMContentLoaded", async () => {
                     el.appendChild(p);
                 }
                 // 🌟 تمت إضافة دعم بلوك الفورم هنا 🌟
-                else if (block.type === 'form') {
+
+                else if (block.type === 'countdown') {
+                    const data = block.content || {};
+                    let align = data.align || 'center';
+                    el.innerHTML = `<div style="text-align:${align}; width:100%; padding:15px; background:var(--page-block-bg, rgba(128,128,128,0.05)); border-radius:12px;">
+                        ${data.title ? `<h3 style="margin:0 0 10px; font-size:18px;">${data.title}</h3>` : ''}
+                        <div style="font-size:24px; font-weight:bold; font-family:monospace;">00 : 00 : 00 : 00</div>
+                        <div style="font-size:12px; opacity:0.7; display:flex; justify-content:center; gap:20px; margin-top:5px;"><span>Days</span><span>Hrs</span><span>Mins</span><span>Secs</span></div>
+                    </div>`;
+                }
+                else if (block.type === 'map') {
+                    const data = block.content || {};
+                    let encodedAddress = encodeURIComponent(data.address || 'Riyadh, Saudi Arabia');
+                    el.innerHTML = `<div style="width:100%; border-radius:12px; overflow:hidden;"><iframe width="100%" height="250" frameborder="0" style="border:0" src="https://www.google.com/maps?q=${encodedAddress}&output=embed" allowfullscreen></iframe></div>`;
+                }
+                else if (block.type === 'carousel') {
+                    const data = block.content || {};
+                    const images = data.images || [];
+                    let html = `<div style="width:100%; display:flex; overflow-x:auto; gap:10px; scroll-snap-type: x mandatory; padding-bottom:10px;">`;
+                    images.forEach(img => {
+                        html += `<img src="${img}" style="height:200px; min-width:80%; object-fit:cover; border-radius:12px; scroll-snap-align: center;">`;
+                    });
+                    html += `</div>`;
+                    el.innerHTML = html;
+                }
+                else if (block.type === 'audio') {
+                    const data = block.content || {};
+                    let url = data.url || '';
+                    let embedUrl = url;
+                    if (url.includes('spotify.com')) {
+                        embedUrl = url.replace('open.spotify.com/', 'open.spotify.com/embed/');
+                    } else if (url.includes('soundcloud.com')) {
+                        embedUrl = `https://w.soundcloud.com/player/?url=${encodeURIComponent(url)}&color=%23ff5500&auto_play=false&hide_related=false&show_comments=true&show_user=true&show_reposts=false&show_teaser=true&visual=true`;
+                    }
+                    el.innerHTML = `<div style="width:100%; border-radius:12px; overflow:hidden;"><iframe style="border-radius:12px" src="${embedUrl}" width="100%" height="152" frameBorder="0" allowfullscreen="" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy"></iframe></div>`;
+                }
+
+                else if (block.type === 'divider') {
+                    const data = block.content || {};
+                    let type = data.type || 'solid';
+                    let color = data.color || 'var(--page-text)';
+                    let thickness = data.thickness || '1px';
+                    let spacing = data.spacing || '20px';
+
+                    if (type === 'spacer') {
+                        el.innerHTML = `<div style="width:100%; height:${spacing};"></div>`;
+                    } else {
+                        el.innerHTML = `<div style="width:100%; padding:${spacing} 0;"><hr style="border:none; border-top:${thickness} ${type} ${color}; opacity:0.3; margin:0;"></div>`;
+                    }
+                }
+                else if (block.type === 'testimonials') {
+                    const data = block.content || {};
+                    const items = data.items || [];
+                    let html = `<div style="width:100%; display:flex; flex-direction:column; gap:16px;">`;
+                    items.forEach(item => {
+                        html += `<div style="padding:20px; background:var(--page-block-bg, rgba(128,128,128,0.05)); border-radius:12px; position:relative;">
+                            <div style="font-size:24px; opacity:0.2; position:absolute; top:10px; left:15px;">"</div>
+                            <p style="font-size:15px; font-style:italic; margin:0 0 15px 0; padding-left:15px; position:relative; z-index:1;">${item.text}</p>
+                            <div style="display:flex; align-items:center; gap:12px;">
+                                ${item.avatar ? `<img src="${item.avatar}" style="width:40px; height:40px; border-radius:50%; object-fit:cover;">` : `<div style="width:40px; height:40px; border-radius:50%; background:rgba(128,128,128,0.2);"></div>`}
+                                <div><div style="font-weight:bold; font-size:14px;">${item.name}</div>${item.role ? `<div style="font-size:12px; opacity:0.7;">${item.role}</div>` : ''}</div>
+                            </div>
+                        </div>`;
+                    });
+                    html += `</div>`;
+                    el.innerHTML = html;
+                }
+                else if (block.type === 'quote') {
+                    const data = block.content || {};
+                    el.innerHTML = `<div style="width:100%; padding:24px; border-left: 4px solid var(--page-text); background:var(--page-block-bg, rgba(128,128,128,0.05)); border-radius:0 12px 12px 0;">
+                        <p style="font-size:18px; font-style:italic; margin:0 0 10px 0; font-weight:500;">"${data.text}"</p>
+                        ${data.author ? `<div style="font-size:14px; opacity:0.8; font-weight:bold;">— ${data.author}</div>` : ''}
+                    </div>`;
+                }
+                else if (block.type === 'gallery') {
+                    const data = block.content || {};
+                    const images = data.images || [];
+                    const columns = data.columns || 2;
+                    let html = `<div style="width:100%; display:grid; grid-template-columns: repeat(${columns}, 1fr); gap:8px;">`;
+                    images.forEach(img => {
+                        html += `<img src="${img}" style="width:100%; aspect-ratio:1/1; object-fit:cover; border-radius:8px;">`;
+                    });
+                    html += `</div>`;
+                    el.innerHTML = html;
+                }
+
+                else if (block.type === 'pricing') {
+                    const data = block.content || {};
+                    const items = data.items || [];
+                    let html = `<div style="width:100%; display:flex; flex-direction:column; gap:12px;">`;
+                    items.forEach(item => {
+                        html += `<div style="padding:16px; background:var(--page-block-bg, rgba(128,128,128,0.05)); border-radius:12px; display:flex; justify-content:space-between; align-items:center;">
+                            <div><div style="font-weight:bold; font-size:16px;">${item.name}</div>${item.desc ? `<div style="font-size:13px; opacity:0.7; margin-top:4px;">${item.desc}</div>` : ''}</div>
+                            <div style="font-size:18px; font-weight:bold;">${item.price}</div>
+                        </div>`;
+                    });
+                    html += `</div>`;
+                    el.innerHTML = html;
+                }
+                else if (block.type === 'cta') {
+                    const data = block.content || {};
+                    let bg = data.bg || '#3b82f6';
+                    let textCol = data.textCol || '#ffffff';
+                    let isPill = data.style === 'pill';
+                    el.innerHTML = `<div style="width:100%; display:flex; justify-content:center;"><a href="${data.url || '#'}" target="_blank" style="padding:14px 32px; background:${bg}; color:${textCol}; text-decoration:none; font-weight:bold; font-size:16px; border-radius:${isPill ? '50px' : '12px'}; display:inline-block; text-align:center; width:100%; max-width:300px; box-shadow:0 4px 6px -1px rgba(0,0,0,0.1); transition:transform 0.2s;">${data.text || 'Click Here'}</a></div>`;
+                }
+                else if (block.type === 'customhtml') {
+                    const data = block.content || {};
+                    el.innerHTML = `<div style="width:100%; border-radius:12px; overflow:hidden;">${data.html || ''}</div>`;
+                }
+                else if (block.type === 'download') {
+                    const data = block.content || {};
+                    el.innerHTML = `<div style="width:100%; display:flex; justify-content:center;"><a href="${data.url || '#'}" download target="_blank" style="padding:14px 20px; background:var(--page-block-bg, rgba(128,128,128,0.05)); color:var(--page-text); border:1px solid rgba(128,128,128,0.2); text-decoration:none; font-weight:bold; font-size:15px; border-radius:12px; display:flex; align-items:center; justify-content:center; gap:10px; width:100%;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>${data.text || 'Download File'}</a></div>`;
+                }
+else if (block.type === 'form') {
                     // يعتمد على كيفية حفظ المحرر للفورم، غالباً يحفظ الـ HTML المولد في content.html أو content.code
                     const formHtml = block.content.html || block.content.code || block.content.text || '';
                     if (formHtml) {
